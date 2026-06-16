@@ -1,0 +1,53 @@
+{
+  "name": "shafqat-tyres",
+  "version": "1.0.0",
+  "description": "Shafqat Tyres & Rim House - POS & Inventory Management",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "concurrently \"npm run vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "vite": "vite",
+    "build": "vite build && electron-builder",
+    "electron": "electron .",
+    "dev": "concurrently \"npm run vite\" \"wait-on http://localhost:5173 && electron .\""
+  },
+  "keywords": [],
+  "author": "Shafqat Tyres",
+  "license": "ISC",
+  "dependencies": {
+    "date-fns": "^3.6.0",
+    "recharts": "^2.12.7",
+    "sql.js": "^1.12.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "concurrently": "^8.2.2",
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.38",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.4",
+    "vite": "^5.3.1",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.shafqattyres.pos",
+    "productName": "Shafqat Tyres POS",
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    },
+    "files": [
+      "dist/**/*",
+      "src/main/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/better-sqlite3/build",
+        "to": "better-sqlite3/build"
+      }
+    ]
+  }
+}
