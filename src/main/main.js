@@ -1,8 +1,27 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
 const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged
+
+// ─── Auto Updater ─────────────────────────────────────────────────────────────
+let autoUpdater
+if (!isDev) {
+  try {
+    autoUpdater = require('electron-updater').autoUpdater
+    autoUpdater.autoDownload = true
+    autoUpdater.autoInstallOnAppQuit = true
+    autoUpdater.on('update-downloaded', () => {
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Ready',
+        message: 'A new version has been downloaded. Restart to apply the update.',
+        buttons: ['Restart Now', 'Later']
+      }).then(r => { if (r.response === 0) autoUpdater.quitAndInstall() })
+    })
+    autoUpdater.on('error', (e) => console.log('Updater error:', e.message))
+  } catch(e) { console.log('Updater not available') }
+}
 
 // ─── Database Setup ───────────────────────────────────────────────────────────
 let db
@@ -571,6 +590,7 @@ function createWindow() {
 app.whenReady().then(async () => {
   await initDatabase()
   createWindow()
+  if (!isDev && autoUpdater) setTimeout(() => autoUpdater.checkForUpdatesAndNotify(), 3000)
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 })
 
