@@ -43,6 +43,7 @@ async function initDatabase() {
 
   db.run('PRAGMA foreign_keys = ON')
   createTables()
+  migrateDatabase()
   seedData()
   saveDb(dbPath)
   // Auto-save every 30 seconds
@@ -164,6 +165,7 @@ function createTables() {
     customer_id INTEGER REFERENCES customers(id),
     customer_name TEXT,
     vehicle_plate TEXT,
+    vehicle_km TEXT,
     subtotal REAL NOT NULL DEFAULT 0,
     discount REAL NOT NULL DEFAULT 0,
     total REAL NOT NULL DEFAULT 0,
@@ -221,6 +223,14 @@ function createTables() {
     id INTEGER PRIMARY KEY,
     done INTEGER DEFAULT 0
   )`)
+}
+function migrateDatabase() {
+  try {
+    db.run(`ALTER TABLE sales ADD COLUMN vehicle_km TEXT DEFAULT ''`)
+    console.log('Migration: added vehicle_km column')
+  } catch(e) {
+    // Column already exists, ignore
+  }
 }
 
 function seedData() {
@@ -470,7 +480,7 @@ ipcMain.handle('sales:get', (_, id) => {
   return sale
 })
 ipcMain.handle('sales:create', (_, data) => {
-  const { customer_id, customer_name, vehicle_plate, items, discount, paid, notes, created_by } = data
+  const { customer_id, customer_name, vehicle_plate, vehicle_km, items, discount, paid, notes, created_by } = data
   const subtotal = items.reduce((s, i) => s + i.total_price, 0)
   const total = subtotal - (discount || 0)
   const balance = total - (paid || 0)
@@ -478,8 +488,8 @@ ipcMain.handle('sales:create', (_, data) => {
   const count = get('SELECT COUNT(*) as c FROM sales')
   const invoice_no = `INV-${String((count.c || 0) + 1).padStart(5, '0')}`
 
-  const r = run(`INSERT INTO sales (invoice_no,customer_id,customer_name,vehicle_plate,subtotal,discount,total,paid,balance,payment_status,notes,created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [invoice_no, customer_id||null, customer_name||'Walk-in', vehicle_plate||'', subtotal, discount||0, total, paid||0, balance, payment_status, notes||'', created_by||null])
+  const r = run(`INSERT INTO sales (invoice_no,customer_id,customer_name,vehicle_plate,vehicle_km,subtotal,discount,total,paid,balance,payment_status,notes,created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [invoice_no, customer_id||null, customer_name||'Walk-in', vehicle_plate||'', vehicle_km||'', subtotal, discount||0, total, paid||0, balance, payment_status, notes||'', created_by||null])
   const saleId = r.lastInsertRowid
 
   for (const item of items) {
@@ -489,7 +499,33 @@ ipcMain.handle('sales:create', (_, data) => {
       run('UPDATE inventory SET quantity = quantity - ? WHERE id=?', [item.quantity, item.inventory_id])
     }
   }
-  if (customer_id && balance > 0) {
+  let finalCustomerId = customer_id
+  if (!customer_id && customer_name && customer_name !== 'Walk-in Customer') {
+    const existing = get('SELECT id FROM customers WHERE name=? AND phone=?', [customer_name, ''])
+    if (existing) {
+      finalCustomerId = existing.id
+    } else {
+      const newCust = run('INSERT INTO customers (name, phone, vehicle_plate) VALUES (?,?,?)',
+        [customer_name, '', vehicle_plate||''])
+      finalCustomerId = newCust.lastInsertRowid
+    }
+    if (balance > 0) {
+      run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, finalCustomerId])
+    }
+  } else let finalCustomerId = customer_id
+  if (!customer_id && customer_name && customer_name !== 'Walk-in Customer') {
+    const existing = get('SELECT id FROM customers WHERE name=? AND phone=?', [customer_name, ''])
+    if (existing) {
+      finalCustomerId = existing.id
+    } else {
+      const newCust = run('INSERT INTO customers (name, phone, vehicle_plate) VALUES (?,?,?)',
+        [customer_name, '', vehicle_plate||''])
+      finalCustomerId = newCust.lastInsertRowid
+    }
+    if (balance > 0) {
+      run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, finalCustomerId])
+    }
+  } else if (customer_id && balance > 0) {
     run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, customer_id])
   }
   saveDb(getDbPath())
@@ -571,12 +607,14 @@ ipcMain.handle('reports:topProducts', (_, { date_from, date_to }) => {
 function createWindow() {
   const win = new BrowserWindow({
     width: 1400, height: 900, minWidth: 1100, minHeight: 700,
+    autoHideMenuBar: true,
+    frame: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
-    backgroundColor: '#0a0a0f',
+    backgroundColor: '#080810',
     show: false,
   })
   if (isDev) {

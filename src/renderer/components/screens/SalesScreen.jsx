@@ -34,10 +34,10 @@ function InvoicePrint({ sale, items, company }) {
           {[0,60,120,180,240,300].map(a => { const r=a*Math.PI/180; return <line key={a} x1={32+10*Math.cos(r)} y1={32+10*Math.sin(r)} x2={32+27*Math.cos(r)} y2={32+27*Math.sin(r)} stroke="#111" strokeWidth="3" strokeLinecap="round"/> })}
         </svg>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '22px', fontWeight: 700, lineHeight: 1.2 }}>{company?.name}</div>
-          <div style={{ color: '#555', marginTop: '2px' }}>{company?.address}</div>
-          <div style={{ color: '#555' }}>📞 {company?.phone}</div>
-        </div>
+  <div style={{ fontSize: '18px', fontWeight: 700, lineHeight: 1.2, whiteSpace: 'nowrap' }}>{company?.name}</div>
+  <div style={{ color: '#555', marginTop: '4px', fontSize: '12px' }}>{company?.address}</div>
+  <div style={{ color: '#555', fontSize: '12px' }}>📞 {company?.phone}</div>
+</div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '24px', fontWeight: 700, letterSpacing: '2px', color: '#111' }}>INVOICE</div>
           <table style={{ marginLeft: 'auto', marginTop: '6px', fontSize: '12px' }}>
@@ -55,22 +55,51 @@ function InvoicePrint({ sale, items, company }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
         <div style={{ border: '1px solid #ddd', borderRadius: '6px', padding: '14px' }}>
           <div style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px', color: '#333' }}>Customer Details</div>
-          <table style={{ fontSize: '12px', width: '100%' }}>
-            <tbody>
-              <tr><td style={{ color: '#666', width: '80px', paddingBottom: '4px' }}>Name</td><td style={{ fontWeight: 600 }}>: {sale.customer_name}</td></tr>
-              {sale.vehicle_plate && <tr><td style={{ color: '#666', paddingBottom: '4px' }}>Vehicle</td><td style={{ fontWeight: 600 }}>: {sale.vehicle_plate}</td></tr>}
-            </tbody>
-          </table>
+          <table style={{ fontSize: '12px', width: '100%', borderCollapse: 'collapse' }}>
+  <tbody>
+    <tr>
+      <td style={{ color: '#666', width: '70px', paddingBottom: '6px', verticalAlign: 'top' }}>Name</td>
+      <td style={{ width: '10px', color: '#666', paddingBottom: '6px' }}>:</td>
+      <td style={{ fontWeight: 600, paddingBottom: '6px' }}>{sale.customer_name}</td>
+    </tr>
+    {sale.vehicle_plate && (
+      <tr>
+        <td style={{ color: '#666', verticalAlign: 'top', paddingBottom: '6px' }}>Vehicle</td>
+        <td style={{ color: '#666', paddingBottom: '6px' }}>:</td>
+        <td style={{ fontWeight: 600, paddingBottom: '6px' }}>{sale.vehicle_plate}</td>
+      </tr>
+    )}
+    {sale.vehicle_km && (
+      <tr>
+        <td style={{ color: '#666', verticalAlign: 'top' }}>KM</td>
+        <td style={{ color: '#666' }}>:</td>
+        <td style={{ fontWeight: 600 }}>{Number(sale.vehicle_km).toLocaleString()} km</td>
+      </tr>
+    )}
+  </tbody>
+</table>
         </div>
         <div style={{ border: '1px solid #ddd', borderRadius: '6px', padding: '14px' }}>
           <div style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px', color: '#333' }}>Bank Details</div>
-          <table style={{ fontSize: '12px', width: '100%' }}>
-            <tbody>
-              <tr><td style={{ color: '#666', width: '80px', paddingBottom: '4px' }}>Bank</td><td>: {company?.bank_name}</td></tr>
-              <tr><td style={{ color: '#666', paddingBottom: '4px' }}>Account</td><td>: {company?.bank_account}</td></tr>
-              <tr><td style={{ color: '#666', paddingBottom: '4px' }}>IBAN</td><td>: {company?.bank_iban}</td></tr>
-            </tbody>
-          </table>
+          <table style={{ fontSize: '12px', width: '100%', borderCollapse: 'collapse' }}>
+  <tbody>
+    <tr>
+      <td style={{ color: '#666', width: '70px', paddingBottom: '6px' }}>Bank</td>
+      <td style={{ width: '10px', color: '#666', paddingBottom: '6px' }}>:</td>
+      <td style={{ fontWeight: 600, paddingBottom: '6px' }}>{company?.bank_name}</td>
+    </tr>
+    <tr>
+      <td style={{ color: '#666', paddingBottom: '6px' }}>Account</td>
+      <td style={{ color: '#666', paddingBottom: '6px' }}>:</td>
+      <td style={{ fontWeight: 600, paddingBottom: '6px' }}>{company?.bank_account}</td>
+    </tr>
+    <tr>
+      <td style={{ color: '#666' }}>IBAN</td>
+      <td style={{ color: '#666' }}>:</td>
+      <td style={{ fontWeight: 600, wordBreak: 'break-all' }}>{company?.bank_iban}</td>
+    </tr>
+  </tbody>
+</table>
         </div>
       </div>
 
@@ -188,7 +217,22 @@ function SalesList({ onNewSale, isAdmin }) {
   }
 
   const handlePrint = () => {
-    window.print()
+    const printContent = document.getElementById('invoice-print-area').innerHTML
+    const printWindow = window.open('', '_blank')
+    printWindow.document.write(`
+      <html><head><title>Invoice ${viewSale.invoice_no}</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background: white; color: black; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 7px 10px; }
+        th { background: #f3f4f6; font-weight: 700; }
+      </style>
+      </head><body>${printContent}</body></html>
+    `)
+    printWindow.document.close()
+    printWindow.focus()
+    setTimeout(() => { printWindow.print(); printWindow.close() }, 500)
   }
 
   return (
@@ -214,6 +258,7 @@ function SalesList({ onNewSale, isAdmin }) {
                 <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Invoice</th>
                 <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Customer</th>
                 <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Vehicle</th>
+                <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">KM</th>
                 <th className="px-4 py-3 text-right text-xs text-dark-300 font-medium">Total</th>
                 <th className="px-4 py-3 text-right text-xs text-dark-300 font-medium">Paid</th>
                 <th className="px-4 py-3 text-right text-xs text-dark-300 font-medium">Balance</th>
@@ -224,14 +269,15 @@ function SalesList({ onNewSale, isAdmin }) {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="9" className="py-12 text-center text-dark-300">Loading...</td></tr>
+                <tr><td colSpan="10" className="py-12 text-center text-dark-300">Loading...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan="9" className="py-12 text-center text-dark-300">No sales found</td></tr>
+                <tr><td colSpan="10" className="py-12 text-center text-dark-300">No sales found</td></tr>
               ) : filtered.map(s => (
                 <tr key={s.id} className="table-row">
                   <td className="px-4 py-3 font-mono text-xs text-brand-400">{s.invoice_no}</td>
                   <td className="px-4 py-3 text-white">{s.customer_name}</td>
-                  <td className="px-4 py-3 text-dark-300 text-xs">{s.vehicle_plate || '—'}</td>
+                  <td className="px-4 py-3 text-xs">{s.vehicle_plate || '—'}</td>
+                  <td className="px-4 py-3 text-xs">{s.vehicle_km ? Number(s.vehicle_km).toLocaleString() + ' km' : '—'}</td>
                   <td className="px-4 py-3 text-right font-medium">{fmt.currency(s.total)}</td>
                   <td className="px-4 py-3 text-right text-green-400">{fmt.currency(s.paid)}</td>
                   <td className="px-4 py-3 text-right text-red-400">{s.balance > 0 ? fmt.currency(s.balance) : '—'}</td>
@@ -258,15 +304,14 @@ function SalesList({ onNewSale, isAdmin }) {
         </div>
       </div>
 
-      {/* View Sale Modal */}
       {viewSale && company && (
         <Modal title={`Invoice ${viewSale.invoice_no}`} onClose={() => setViewSale(null)} size="xl" noPad>
-          <div className="no-print flex items-center justify-end gap-2 px-6 py-3 border-b border-dark-600">
+          <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', padding: '12px 24px', borderBottom: '1px solid #1e1e2e' }}>
             <button onClick={handlePrint} className="btn-primary flex items-center gap-2 text-sm">
               <Printer size={16} />Print Invoice
             </button>
           </div>
-          <div className="p-6">
+          <div id="invoice-print-area" style={{ padding: '0' }}>
             <InvoicePrint sale={viewSale} items={viewItems} company={company} />
           </div>
         </Modal>
@@ -290,7 +335,7 @@ function NewSaleForm({ onDone }) {
   const [inventory, setInventory] = useState([])
   const [customers, setCustomers] = useState([])
   const [company, setCompany] = useState(null)
-  const [customer, setCustomer] = useState({ id: '', name: '', plate: '' })
+  const [customer, setCustomer] = useState({ id: '', name: '', plate: '', km: '' })
   const [items, setItems] = useState([])
   const [discount, setDiscount] = useState(0)
   const [paid, setPaid] = useState(0)
@@ -356,6 +401,7 @@ function NewSaleForm({ onDone }) {
       customer_id: customer.id || null,
       customer_name: customer.name || 'Walk-in Customer',
       vehicle_plate: customer.plate,
+      vehicle_km: customer.km,
       items: items.map(i => ({ ...i, quantity: Number(i.quantity), unit_price: Number(i.unit_price), total_price: Number(i.total_price) })),
       discount: Number(discount),
       paid: Number(paid),
@@ -396,12 +442,12 @@ function NewSaleForm({ onDone }) {
         {/* Customer */}
         <div className="card p-4 space-y-3">
           <h3 className="text-sm font-semibold text-white">Customer</h3>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-4 gap-3">
             <div>
               <label className="label">Select Customer</label>
               <select className="input" value={customer.id} onChange={e => {
                 const c = customers.find(c => c.id === Number(e.target.value))
-                setCustomer(c ? { id: c.id, name: c.name, plate: c.vehicle_plate || '' } : { id: '', name: '', plate: '' })
+                setCustomer(c ? { id: c.id, name: c.name, plate: c.vehicle_plate || '', km: '' } : { id: '', name: '', plate: '', km: '' })
               }}>
                 <option value="">Walk-in / New</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -414,6 +460,10 @@ function NewSaleForm({ onDone }) {
             <div>
               <label className="label">Vehicle Plate</label>
               <input className="input" value={customer.plate} onChange={e => setCustomer(p => ({ ...p, plate: e.target.value }))} placeholder="e.g. LMN-1234" />
+            </div>
+            <div>
+              <label className="label">Vehicle KM</label>
+              <input className="input" value={customer.km || ''} onChange={e => setCustomer(p => ({ ...p, km: e.target.value }))} placeholder="e.g. 45000" type="number" />
             </div>
           </div>
         </div>

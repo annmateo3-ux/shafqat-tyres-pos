@@ -44,7 +44,7 @@
     @apply bg-[#0f0f1a] border border-[#2a2a3d] rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 w-full;
   }
   .label {
-    @apply block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-widest;
+    @apply block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-widest;
   }
   .badge-paid { @apply bg-emerald-500/15 text-emerald-400 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-emerald-500/20; }
   .badge-unpaid { @apply bg-red-500/15 text-red-400 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-red-500/20; }
@@ -52,8 +52,20 @@
   .table-row {
     @apply border-b border-[#1a1a2a] hover:bg-[#1a1a2a] transition-colors duration-150 cursor-default;
   }
+  .table-row td {
+    color: #b0b0c8;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .table-row:hover td { color: #e2e8f0; }
+  .table-row td.text-white,
+  .table-row:hover td.text-white { color: white; }
+  .table-row td.text-red-400,
+  .table-row:hover td.text-red-400 { color: #f87171; }
+  .table-row td.text-green-400,
+  .table-row:hover td.text-green-400 { color: #4ade80; }
   .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 text-gray-500 hover:text-white hover:bg-[#1e1e2e];
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 text-gray-400 hover:text-white hover:bg-[#1e1e2e];
   }
   .sidebar-item.active {
     @apply bg-red-500/10 text-red-400 border border-red-500/20;
@@ -64,8 +76,24 @@
   .screen-enter {
     animation: screenEnter 0.25s ease-out forwards;
   }
+  .action-btn {
+    padding: 6px; border-radius: 8px; border: none;
+    background: none; color: #6b7280; cursor: pointer;
+    transition: color 0.15s;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .action-btn:hover { color: #ef4444; }
+  .th-cell {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #1a1a2a;
+  }
 }
-
 /* ── Animations ────────────────────────────────── */
 @keyframes screenEnter {
   from { opacity: 0; transform: translateX(16px); }
@@ -150,7 +178,11 @@
 
 /* ── Print styles ──────────────────────────────── */
 @media print {
-  body { background: white !important; color: black !important; overflow: visible !important; font-family: Arial, sans-serif !important; }
-  .no-print { display: none !important; }
+  * { -webkit-print-color-adjust: exact; box-sizing: border-box; }
+  body { background: white !important; color: black !important; overflow: visible !important; font-family: Arial, sans-serif !important; margin: 0; padding: 0; }
+  aside, nav, .no-print { display: none !important; }
+  main { margin: 0 !important; padding: 0 !important; overflow: visible !important; position: static !important; }
+  .screen-enter { animation: none !important; }
+  #root > div { display: block !important; }
   .print-area { display: block !important; }
 }

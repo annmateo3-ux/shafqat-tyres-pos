@@ -171,8 +171,8 @@ export default function ExpensesScreen() {
                   <td className="px-4 py-3 text-xs text-dark-300">{e.created_by_name || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => { setEditItem(e); setModal('form') }} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-brand-400 transition-colors"><Edit size={14} /></button>
-                      {isAdmin && <button onClick={() => setDeleteId(e.id)} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-red-400 transition-colors"><Trash size={14} /></button>}
+                      <button onClick={() => { setEditItem(e); setModal('form') }} className="action-btn" title="Edit"><Edit size={15} /></button>
+                      {isAdmin && <button onClick={() => setDeleteId(e.id)} className="action-btn" title="Delete"><Trash size={15} /></button>}
                     </div>
                   </td>
                 </tr>

@@ -117,7 +117,7 @@ export default function Dashboard() {
   })) || []
 
   return (
-    <div className="screen-enter scroll-area" style={{ padding: '24px', height: '100vh' }}>
+    <div className="screen-enter" style={{ padding: '24px', minHeight: '100vh' }}>
       {/* Header */}
       <div className="animate-fade-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div>

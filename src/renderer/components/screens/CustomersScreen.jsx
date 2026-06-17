@@ -138,7 +138,7 @@ export default function CustomersScreen() {
   const totalDue = useMemo(() => customers.reduce((s, c) => s + (c.balance || 0), 0), [customers])
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-6 space-y-5" style={{ minHeight: '100vh' }}>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Customers</h1>
@@ -175,21 +175,21 @@ export default function CustomersScreen() {
               ) : filtered.map(c => (
                 <tr key={c.id} className="table-row">
                   <td className="px-4 py-3 font-medium text-white">{c.name}</td>
-                  <td className="px-4 py-3 text-dark-300">{c.phone || '—'}</td>
-                  <td className="px-4 py-3 text-dark-300 font-mono text-xs">{c.vehicle_plate || '—'}</td>
+                  <td className="px-4 py-3">{c.phone || '—'}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{c.vehicle_plate || '—'}</td>
                   <td className="px-4 py-3 text-right">
                     {c.balance > 0 ? <span className="text-red-400 font-bold">{fmt.currency(c.balance)}</span> : <span className="text-green-400 text-xs">Clear</span>}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
                       {c.balance > 0 && (
-                        <button onClick={() => setPayItem(c)} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-green-400 transition-colors" title="Record payment">
-                          <CreditCard size={14} />
+                        <button onClick={() => setPayItem(c)} className="action-btn" title="Record payment">
+                          <CreditCard size={15} />
                         </button>
                       )}
-                      <button onClick={() => setPayItem(c)} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-brand-400 transition-colors"><Eye size={14} /></button>
-                      <button onClick={() => { setEditItem(c); setModal('form') }} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-brand-400 transition-colors"><Edit size={14} /></button>
-                      {isAdmin && <button onClick={() => setDeleteId(c.id)} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-red-400 transition-colors"><Trash size={14} /></button>}
+                      <button onClick={() => setPayItem(c)} className="action-btn" title="View payments"><Eye size={15} /></button>
+                      <button onClick={() => { setEditItem(c); setModal('form') }} className="action-btn" title="Edit"><Edit size={15} /></button>
+                      {isAdmin && <button onClick={() => setDeleteId(c.id)} className="action-btn" title="Delete"><Trash size={15} /></button>}
                     </div>
                   </td>
                 </tr>
