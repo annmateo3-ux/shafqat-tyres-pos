@@ -2,10 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @layer base {
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background-color: #0a0a0f;
+    background-color: #080810;
     color: #e2e8f0;
     font-family: 'Inter', system-ui, sans-serif;
     overflow: hidden;
@@ -13,53 +15,142 @@
     -webkit-user-select: none;
   }
   input, textarea, select { user-select: text; -webkit-user-select: text; }
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: #111118; }
-  ::-webkit-scrollbar-thumb { background: #3d3d52; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #5a5a7a; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #0f0f1a; }
+  ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #ef4444; }
 }
 
 @layer components {
   .card {
-    @apply bg-dark-700 border border-dark-500 rounded-xl;
+    @apply bg-[#0f0f1a] border border-[#1e1e2e] rounded-2xl;
+  }
+  .card-hover {
+    @apply card transition-all duration-300 hover:border-red-500/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-red-500/5;
   }
   .btn-primary {
-    @apply bg-brand-500 hover:bg-brand-400 text-dark-900 font-semibold px-4 py-2 rounded-lg transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-red-600 hover:bg-red-500 text-white font-semibold px-4 py-2 rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed relative overflow-hidden;
   }
   .btn-secondary {
-    @apply bg-dark-500 hover:bg-dark-400 text-dark-100 font-medium px-4 py-2 rounded-lg transition-all duration-150 active:scale-95;
+    @apply bg-[#1e1e2e] hover:bg-[#252538] text-gray-300 font-medium px-4 py-2 rounded-xl transition-all duration-200 active:scale-95 border border-[#2a2a3d];
   }
   .btn-danger {
-    @apply bg-red-600 hover:bg-red-500 text-white font-medium px-4 py-2 rounded-lg transition-all duration-150 active:scale-95;
+    @apply bg-red-600 hover:bg-red-500 text-white font-medium px-4 py-2 rounded-xl transition-all duration-200 active:scale-95;
   }
   .btn-ghost {
-    @apply hover:bg-dark-600 text-dark-200 hover:text-white font-medium px-3 py-2 rounded-lg transition-all duration-150;
+    @apply hover:bg-[#1e1e2e] text-gray-400 hover:text-white font-medium px-3 py-2 rounded-xl transition-all duration-200;
   }
   .input {
-    @apply bg-dark-600 border border-dark-400 rounded-lg px-3 py-2 text-white placeholder-dark-300 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 transition-all duration-150 w-full;
+    @apply bg-[#0f0f1a] border border-[#2a2a3d] rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all duration-200 w-full;
   }
   .label {
-    @apply block text-xs font-medium text-dark-200 mb-1 uppercase tracking-wide;
+    @apply block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-widest;
   }
-  .badge-paid { @apply bg-green-500/20 text-green-400 text-xs font-medium px-2 py-0.5 rounded-full; }
-  .badge-unpaid { @apply bg-red-500/20 text-red-400 text-xs font-medium px-2 py-0.5 rounded-full; }
-  .badge-partial { @apply bg-yellow-500/20 text-yellow-400 text-xs font-medium px-2 py-0.5 rounded-full; }
-  .stat-card {
-    @apply card p-5 flex flex-col gap-2;
-  }
+  .badge-paid { @apply bg-emerald-500/15 text-emerald-400 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-emerald-500/20; }
+  .badge-unpaid { @apply bg-red-500/15 text-red-400 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-red-500/20; }
+  .badge-partial { @apply bg-amber-500/15 text-amber-400 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-amber-500/20; }
   .table-row {
-    @apply border-b border-dark-600 hover:bg-dark-600/50 transition-colors duration-100;
+    @apply border-b border-[#1a1a2a] hover:bg-[#1a1a2a] transition-colors duration-150 cursor-default;
   }
   .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150 text-dark-200 hover:text-white hover:bg-dark-600;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 text-gray-500 hover:text-white hover:bg-[#1e1e2e];
   }
   .sidebar-item.active {
-    @apply bg-brand-500/15 text-brand-400 hover:bg-brand-500/20;
+    @apply bg-red-500/10 text-red-400 border border-red-500/20;
+  }
+  .stat-card {
+    @apply card p-5 flex flex-col gap-3 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/30 hover:border-[#2a2a3d] cursor-default;
+  }
+  .screen-enter {
+    animation: screenEnter 0.25s ease-out forwards;
   }
 }
 
+/* ── Animations ────────────────────────────────── */
+@keyframes screenEnter {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes barGrow {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to   { transform: scaleY(1); transform-origin: bottom; }
+}
+@keyframes ripple {
+  to { transform: scale(4); opacity: 0; }
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes rowIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.animate-fade-up    { animation: fadeUp 0.3s ease-out forwards; }
+.animate-slide-down { animation: slideDown 0.2s ease-out forwards; }
+.animate-modal-in   { animation: modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+.animate-spin-slow  { animation: spin-slow 8s linear infinite; }
+.animate-glow-pulse { animation: glowPulse 2s ease-in-out infinite; }
+.animate-pulse-red  { animation: pulse-red 2s ease-in-out infinite; }
+
+.stagger-1 { animation-delay: 0.05s; opacity: 0; }
+.stagger-2 { animation-delay: 0.10s; opacity: 0; }
+.stagger-3 { animation-delay: 0.15s; opacity: 0; }
+.stagger-4 { animation-delay: 0.20s; opacity: 0; }
+.stagger-5 { animation-delay: 0.25s; opacity: 0; }
+.stagger-6 { animation-delay: 0.30s; opacity: 0; }
+
+/* ── Ripple button ─────────────────────────────── */
+.ripple-btn { position: relative; overflow: hidden; }
+.ripple-btn .ripple {
+  position: absolute; border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  transform: scale(0); animation: ripple 0.5s linear;
+  pointer-events: none;
+}
+
+/* ── Red glow accents ──────────────────────────── */
+.red-glow { box-shadow: 0 0 20px rgba(239,68,68,0.15); }
+.red-glow-sm { box-shadow: 0 0 10px rgba(239,68,68,0.1); }
+
+/* ── Tyre logo spin ────────────────────────────── */
+.tyre-spin:hover .tyre-inner { animation: spin-slow 2s linear infinite; }
+
+/* ── Scrollable area ───────────────────────────── */
+.scroll-area { overflow-y: auto; overflow-x: hidden; }
+
+/* ── Print styles ──────────────────────────────── */
 @media print {
-  body { background: white !important; color: black !important; overflow: visible !important; }
+  body { background: white !important; color: black !important; overflow: visible !important; font-family: Arial, sans-serif !important; }
   .no-print { display: none !important; }
-  .print-only { display: block !important; }
+  .print-area { display: block !important; }
 }

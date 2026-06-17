@@ -14,25 +14,24 @@ import SettingsScreen from './components/screens/SettingsScreen.jsx'
 
 function AppInner() {
   const { user, screen, toast } = useApp()
-
   if (!user) return <LoginScreen />
 
   const screens = {
     dashboard: <Dashboard />,
     inventory: <InventoryScreen />,
-    sales: <SalesScreen />,
+    sales:     <SalesScreen />,
     customers: <CustomersScreen />,
     suppliers: <SuppliersScreen />,
-    expenses: <ExpensesScreen />,
-    reports: <ReportsScreen />,
-    settings: <SettingsScreen />,
+    expenses:  <ExpensesScreen />,
+    reports:   <ReportsScreen />,
+    settings:  <SettingsScreen />,
   }
 
   return (
-    <div className="flex h-screen bg-dark-900 overflow-hidden">
+    <div style={{ display: 'flex', height: '100vh', background: '#080810', overflow: 'hidden' }}>
       <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="animate-fade-in" key={screen}>
+      <main style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        <div key={screen} className="screen-enter" style={{ height: '100%' }}>
           {screens[screen] || <Dashboard />}
         </div>
       </main>
@@ -42,9 +41,5 @@ function AppInner() {
 }
 
 export default function App() {
-  return (
-    <AppProvider>
-      <AppInner />
-    </AppProvider>
-  )
+  return <AppProvider><AppInner /></AppProvider>
 }

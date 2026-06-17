@@ -6,84 +6,138 @@ import ConfirmDialog from '../ui/ConfirmDialog.jsx'
 import { Plus, Trash, Search, Printer, Eye, RefreshCw, X, ShoppingCart } from '../ui/Icons.jsx'
 
 // ─── Invoice Print View ───────────────────────────────────────────────────────
+function numberToWords(n) {
+  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen']
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety']
+  if (n === 0) return 'Zero'
+  const convert = (num) => {
+    if (num < 20) return ones[num]
+    if (num < 100) return tens[Math.floor(num/10)] + (num%10 ? ' ' + ones[num%10] : '')
+    if (num < 1000) return ones[Math.floor(num/100)] + ' Hundred' + (num%100 ? ' ' + convert(num%100) : '')
+    if (num < 100000) return convert(Math.floor(num/1000)) + ' Thousand' + (num%1000 ? ' ' + convert(num%1000) : '')
+    if (num < 10000000) return convert(Math.floor(num/100000)) + ' Lakh' + (num%100000 ? ' ' + convert(num%100000) : '')
+    return convert(Math.floor(num/10000000)) + ' Crore' + (num%10000000 ? ' ' + convert(num%10000000) : '')
+  }
+  return convert(Math.floor(n)) + ' Rupees Only'
+}
+
 function InvoicePrint({ sale, items, company }) {
+  const s = { fontFamily: 'Arial, sans-serif', color: 'black', background: 'white' }
   return (
-    <div className="bg-white text-black p-8 min-h-screen" style={{ fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ ...s, padding: '32px', minHeight: '100vh', fontSize: '13px' }}>
       {/* Header */}
-      <div className="text-center border-b-2 border-gray-800 pb-4 mb-6">
-        <h1 className="text-3xl font-bold">{company?.name}</h1>
-        <p className="text-gray-600">{company?.address}</p>
-        <p className="text-gray-600">Phone: {company?.phone}</p>
-        {company?.bank_name && (
-          <p className="text-gray-600 text-sm mt-1">
-            Bank: {company.bank_name} | A/C: {company.bank_account} | IBAN: {company.bank_iban}
-          </p>
-        )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingBottom: '16px', borderBottom: '2px solid #111', marginBottom: '20px' }}>
+        <svg width="60" height="60" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="28" fill="none" stroke="#111" strokeWidth="4"/>
+          <circle cx="32" cy="32" r="10" fill="none" stroke="#111" strokeWidth="3"/>
+          <circle cx="32" cy="32" r="4" fill="#111"/>
+          {[0,60,120,180,240,300].map(a => { const r=a*Math.PI/180; return <line key={a} x1={32+10*Math.cos(r)} y1={32+10*Math.sin(r)} x2={32+27*Math.cos(r)} y2={32+27*Math.sin(r)} stroke="#111" strokeWidth="3" strokeLinecap="round"/> })}
+        </svg>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '22px', fontWeight: 700, lineHeight: 1.2 }}>{company?.name}</div>
+          <div style={{ color: '#555', marginTop: '2px' }}>{company?.address}</div>
+          <div style={{ color: '#555' }}>📞 {company?.phone}</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '24px', fontWeight: 700, letterSpacing: '2px', color: '#111' }}>INVOICE</div>
+          <table style={{ marginLeft: 'auto', marginTop: '6px', fontSize: '12px' }}>
+            <tbody>
+              <tr><td style={{ color: '#555', paddingRight: '12px' }}>Invoice No.</td><td style={{ fontWeight: 600 }}>: {sale.invoice_no}</td></tr>
+              <tr><td style={{ color: '#555' }}>Date</td><td style={{ fontWeight: 600 }}>: {fmt.date(sale.created_at)}</td></tr>
+              <tr><td style={{ color: '#555' }}>Time</td><td>: {new Date(sale.created_at).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}</td></tr>
+              <tr><td style={{ color: '#555' }}>Status</td><td style={{ fontWeight: 600, color: sale.payment_status==='paid'?'green':'red' }}>: {sale.payment_status?.toUpperCase()}</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Invoice Info */}
-      <div className="flex justify-between mb-6">
-        <div>
-          <p><strong>Invoice:</strong> {sale.invoice_no}</p>
-          <p><strong>Customer:</strong> {sale.customer_name}</p>
-          {sale.vehicle_plate && <p><strong>Vehicle:</strong> {sale.vehicle_plate}</p>}
+      {/* Customer + Bank Details */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+        <div style={{ border: '1px solid #ddd', borderRadius: '6px', padding: '14px' }}>
+          <div style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px', color: '#333' }}>Customer Details</div>
+          <table style={{ fontSize: '12px', width: '100%' }}>
+            <tbody>
+              <tr><td style={{ color: '#666', width: '80px', paddingBottom: '4px' }}>Name</td><td style={{ fontWeight: 600 }}>: {sale.customer_name}</td></tr>
+              {sale.vehicle_plate && <tr><td style={{ color: '#666', paddingBottom: '4px' }}>Vehicle</td><td style={{ fontWeight: 600 }}>: {sale.vehicle_plate}</td></tr>}
+            </tbody>
+          </table>
         </div>
-        <div className="text-right">
-          <p><strong>Date:</strong> {fmt.dateTime(sale.created_at)}</p>
-          <p><strong>Status:</strong> {sale.payment_status?.toUpperCase()}</p>
+        <div style={{ border: '1px solid #ddd', borderRadius: '6px', padding: '14px' }}>
+          <div style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px', color: '#333' }}>Bank Details</div>
+          <table style={{ fontSize: '12px', width: '100%' }}>
+            <tbody>
+              <tr><td style={{ color: '#666', width: '80px', paddingBottom: '4px' }}>Bank</td><td>: {company?.bank_name}</td></tr>
+              <tr><td style={{ color: '#666', paddingBottom: '4px' }}>Account</td><td>: {company?.bank_account}</td></tr>
+              <tr><td style={{ color: '#666', paddingBottom: '4px' }}>IBAN</td><td>: {company?.bank_iban}</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Items Table */}
-      <table className="w-full border-collapse mb-6">
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px', fontSize: '12px' }}>
         <thead>
-          <tr className="bg-gray-100">
-            <th className="border border-gray-300 px-3 py-2 text-left">#</th>
-            <th className="border border-gray-300 px-3 py-2 text-left">Brand</th>
-            <th className="border border-gray-300 px-3 py-2 text-left">Size</th>
-            <th className="border border-gray-300 px-3 py-2 text-left">Pattern</th>
-            <th className="border border-gray-300 px-3 py-2 text-center">Qty</th>
-            <th className="border border-gray-300 px-3 py-2 text-right">Unit Price</th>
-            <th className="border border-gray-300 px-3 py-2 text-right">Total</th>
+          <tr style={{ background: '#f3f4f6' }}>
+            {['S.#','Brand','Size','Pattern','Qty','Unit Price','Total Price'].map(h => (
+              <th key={h} style={{ border: '1px solid #ddd', padding: '8px 10px', textAlign: h==='Qty'?'center':(h==='Unit Price'||h==='Total Price')?'right':'left', fontWeight: 700 }}>{h}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {items.map((item, i) => (
-            <tr key={i}>
-              <td className="border border-gray-300 px-3 py-2">{i + 1}</td>
-              <td className="border border-gray-300 px-3 py-2">{item.brand}</td>
-              <td className="border border-gray-300 px-3 py-2">{item.size}</td>
-              <td className="border border-gray-300 px-3 py-2">{item.pattern}</td>
-              <td className="border border-gray-300 px-3 py-2 text-center">{item.quantity}</td>
-              <td className="border border-gray-300 px-3 py-2 text-right">Rs {Number(item.unit_price).toLocaleString()}</td>
-              <td className="border border-gray-300 px-3 py-2 text-right">Rs {Number(item.total_price).toLocaleString()}</td>
+            <tr key={i} style={{ background: i%2===0?'white':'#fafafa' }}>
+              <td style={{ border: '1px solid #ddd', padding: '7px 10px' }}>{i+1}</td>
+              <td style={{ border: '1px solid #ddd', padding: '7px 10px', fontWeight: 600 }}>{item.brand}</td>
+              <td style={{ border: '1px solid #ddd', padding: '7px 10px' }}>{item.size}</td>
+              <td style={{ border: '1px solid #ddd', padding: '7px 10px' }}>{item.pattern||'-'}</td>
+              <td style={{ border: '1px solid #ddd', padding: '7px 10px', textAlign: 'center', fontWeight: 600 }}>{item.quantity}</td>
+              <td style={{ border: '1px solid #ddd', padding: '7px 10px', textAlign: 'right' }}>Rs {Number(item.unit_price).toLocaleString()}</td>
+              <td style={{ border: '1px solid #ddd', padding: '7px 10px', textAlign: 'right', fontWeight: 600 }}>Rs {Number(item.total_price).toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* Totals */}
-      <div className="flex justify-end">
-        <table className="text-right">
+      {/* Totals + Amount in words */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+        <div style={{ maxWidth: '55%' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Amount In Words:</div>
+          <div style={{ fontSize: '12px', color: '#333', fontStyle: 'italic' }}>{numberToWords(Math.round(sale.total))}</div>
+        </div>
+        <table style={{ fontSize: '13px' }}>
           <tbody>
-            <tr><td className="px-4 py-1 text-gray-600">Subtotal:</td><td className="px-4 py-1 font-medium">Rs {Number(sale.subtotal).toLocaleString()}</td></tr>
-            {sale.discount > 0 && <tr><td className="px-4 py-1 text-gray-600">Discount:</td><td className="px-4 py-1 text-red-600">- Rs {Number(sale.discount).toLocaleString()}</td></tr>}
-            <tr className="border-t-2 border-gray-800 text-lg font-bold"><td className="px-4 py-2">Total:</td><td className="px-4 py-2">Rs {Number(sale.total).toLocaleString()}</td></tr>
-            <tr><td className="px-4 py-1 text-gray-600">Paid:</td><td className="px-4 py-1 text-green-700">Rs {Number(sale.paid).toLocaleString()}</td></tr>
-            {sale.balance > 0 && <tr><td className="px-4 py-1 text-gray-600">Balance Due:</td><td className="px-4 py-1 text-red-700 font-bold">Rs {Number(sale.balance).toLocaleString()}</td></tr>}
+            <tr><td style={{ padding: '3px 20px 3px 0', color: '#555' }}>Sub Total</td><td style={{ padding: '3px 0', textAlign: 'right' }}>Rs {Number(sale.subtotal).toLocaleString()}</td></tr>
+            <tr><td style={{ padding: '3px 20px 3px 0', color: '#555' }}>Discount</td><td style={{ padding: '3px 0', textAlign: 'right' }}>Rs {Number(sale.discount||0).toLocaleString()}</td></tr>
+            <tr style={{ borderTop: '2px solid #111', fontWeight: 700, fontSize: '15px' }}>
+              <td style={{ padding: '6px 20px 6px 0' }}>Total Amount</td>
+              <td style={{ padding: '6px 0', textAlign: 'right' }}>Rs {Number(sale.total).toLocaleString()}</td>
+            </tr>
+            <tr><td style={{ padding: '3px 20px 3px 0', color: '#555' }}>Paid Amount</td><td style={{ padding: '3px 0', textAlign: 'right', color: 'green', fontWeight: 600 }}>Rs {Number(sale.paid).toLocaleString()}</td></tr>
+            {sale.balance > 0 && <tr><td style={{ padding: '3px 20px 3px 0', color: '#555' }}>Balance</td><td style={{ padding: '3px 0', textAlign: 'right', color: 'red', fontWeight: 700 }}>Rs {Number(sale.balance).toLocaleString()}</td></tr>}
           </tbody>
         </table>
       </div>
 
-      {sale.notes && (
-        <div className="mt-6 pt-4 border-t border-gray-300">
-          <p className="text-sm text-gray-600"><strong>Notes:</strong> {sale.notes}</p>
-        </div>
-      )}
+      {/* Notes */}
+      {sale.notes && <div style={{ marginBottom: '16px', fontSize: '12px', color: '#555' }}><strong>Notes:</strong> {sale.notes}</div>}
 
-      <div className="mt-8 text-center text-gray-500 text-sm border-t pt-4">
-        <p>Thank you for your business!</p>
-        <p>{company?.name} — {company?.phone}</p>
+      {/* Terms + Signature */}
+      <div style={{ borderTop: '1px solid #ddd', paddingTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: '12px', marginBottom: '6px' }}>Terms & Conditions</div>
+          <div style={{ fontSize: '11px', color: '#666', lineHeight: 1.8 }}>
+            • Goods once sold will not be taken back.<br/>
+            • No warranty on tube & puncture.<br/>
+            • Please check the goods before leaving.
+          </div>
+        </div>
+        <div style={{ textAlign: 'center'  }}>
+          <div style={{ width: '120px', borderTop: '1px solid #333', paddingTop: '6px', fontSize: '11px', color: '#555' }}>Authorized Signature</div>
+        </div>
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '12px', color: '#888' }}>
+        Thank you for your business! — {company?.name} — {company?.phone}
       </div>
     </div>
   )
