@@ -5,7 +5,7 @@ import Modal from '../ui/Modal.jsx'
 import ConfirmDialog from '../ui/ConfirmDialog.jsx'
 import { Plus, Edit, Trash, Search, AlertTriangle, Package, RefreshCw } from '../ui/Icons.jsx'
 
-const EMPTY = { brand:'', size:'', pattern:'', dot:'', cost_price:'', sell_price:'', min_price:'', quantity:'', supplier_id:'', notes:'' }
+const EMPTY = { brand:'', size:'', pattern:'', dot:'', cost_price:'', sell_price:'', min_price:'', quantity:'', supplier_id:'', notes:'', category:'Tyre' }
 
 function InventoryForm({ item, suppliers, onSave, onClose, isAdmin }) {
   const [form, setForm] = useState(item ? { ...item } : EMPTY)
@@ -22,6 +22,7 @@ function InventoryForm({ item, suppliers, onSave, onClose, isAdmin }) {
       min_price: Number(form.min_price),
       quantity: Number(form.quantity),
       supplier_id: form.supplier_id || null,
+      category: form.category || 'Tyre',
     }
     await onSave(data)
     setSaving(false)
@@ -80,9 +81,18 @@ function InventoryForm({ item, suppliers, onSave, onClose, isAdmin }) {
       </div>
 
       <div>
-        <label className="label">Notes</label>
-        <textarea className="input h-16 resize-none" value={form.notes} onChange={set('notes')} placeholder="Optional notes" />
-      </div>
+          <label className="label">Category</label>
+          <select className="input" value={form.category} onChange={set('category')}>
+            <option value="Tyre">Tyre</option>
+            <option value="Rim">Rim</option>
+            <option value="Tube">Tube</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label className="label">Notes</label>
+          <textarea className="input h-16 resize-none" value={form.notes} onChange={set('notes')} placeholder="Optional notes" />
+        </div>
 
       <div className="flex justify-end gap-3 pt-2">
         <button onClick={onClose} className="btn-secondary">Cancel</button>
@@ -102,6 +112,7 @@ export default function InventoryScreen() {
   const [search, setSearch] = useState('')
   const [filterBrand, setFilterBrand] = useState('')
   const [filterLow, setFilterLow] = useState(false)
+  const [activeTab, setActiveTab] = useState('Tyre')
   const [modal, setModal] = useState(null) // null | 'add' | 'edit'
   const [editItem, setEditItem] = useState(null)
   const [deleteId, setDeleteId] = useState(null)
@@ -124,9 +135,10 @@ export default function InventoryScreen() {
       const matchSearch = !q || [i.brand, i.size, i.pattern, i.dot, i.supplier_name].some(f => f?.toLowerCase().includes(q))
       const matchBrand = !filterBrand || i.brand === filterBrand
       const matchLow = !filterLow || i.quantity <= 3
-      return matchSearch && matchBrand && matchLow
+      const matchTab = (i.category || 'Tyre') === activeTab
+      return matchSearch && matchBrand && matchLow && matchTab
     })
-  }, [items, search, filterBrand, filterLow])
+  }, [items, search, filterBrand, filterLow, activeTab])
 
   const handleSave = async (data) => {
     if (editItem) {
@@ -158,7 +170,7 @@ export default function InventoryScreen() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Inventory</h1>
-          <p className="text-dark-300 text-sm">{items.length} products · {totalQty} tyres in stock</p>
+          <p className="text-dark-300 text-sm">{filtered.length} items · {totalQty} total in stock</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load} className="btn-ghost"><RefreshCw size={16} /></button>
@@ -199,6 +211,23 @@ export default function InventoryScreen() {
         </div>
       )}
 
+      {/* Category Tabs */}
+      <div style={{ display: 'flex', gap: '6px' }}>
+        {['Tyre', 'Rim', 'Tube', 'Other'].map(tab => {
+          const count = items.filter(i => (i.category || 'Tyre') === tab).length
+          return (
+            <button key={tab} onClick={() => setActiveTab(tab)} style={{
+              padding: '7px 18px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+              fontSize: '13px', fontWeight: 500, transition: 'all 0.2s',
+              background: activeTab === tab ? '#ef4444' : '#1e1e2e',
+              color: activeTab === tab ? 'white' : '#6b7280',
+            }}>
+              {tab} <span style={{ opacity: 0.7, fontSize: '11px' }}>({count})</span>
+            </button>
+          )
+        })}
+      </div>
+
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-48">
@@ -227,6 +256,7 @@ export default function InventoryScreen() {
             <thead>
               <tr className="border-b border-dark-600">
                 <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Brand / Size</th>
+                <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Category</th>
                 <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Pattern</th>
                 <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">DOT</th>
                 {isAdmin && <th className="px-4 py-3 text-right text-xs text-dark-300 font-medium">Cost</th>}
@@ -247,6 +277,13 @@ export default function InventoryScreen() {
                   <td className="px-4 py-3">
                     <div className="font-medium text-white">{item.brand}</div>
                     <div className="text-xs text-dark-300 font-mono">{item.size}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span style={{
+                      padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
+                      background: item.category==='Rim' ? '#3b82f620' : item.category==='Tube' ? '#22c55e20' : item.category==='Other' ? '#f59e0b20' : '#ef444420',
+                      color: item.category==='Rim' ? '#3b82f6' : item.category==='Tube' ? '#22c55e' : item.category==='Other' ? '#f59e0b' : '#ef4444',
+                    }}>{item.category || 'Tyre'}</span>
                   </td>
                   <td className="px-4 py-3 text-dark-200">{item.pattern || '—'}</td>
                   <td className="px-4 py-3 text-dark-200 font-mono text-xs">{item.dot || '—'}</td>

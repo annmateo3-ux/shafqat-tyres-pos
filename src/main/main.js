@@ -228,9 +228,11 @@ function migrateDatabase() {
   try {
     db.run(`ALTER TABLE sales ADD COLUMN vehicle_km TEXT DEFAULT ''`)
     console.log('Migration: added vehicle_km column')
-  } catch(e) {
-    // Column already exists, ignore
-  }
+  } catch(e) {}
+  try {
+    db.run(`ALTER TABLE inventory ADD COLUMN category TEXT DEFAULT 'Tyre'`)
+    console.log('Migration: added category column')
+  } catch(e) {}
 }
 
 function seedData() {
@@ -440,16 +442,16 @@ ipcMain.handle('inventory:list', () => {
 })
 ipcMain.handle('inventory:get', (_, id) => get('SELECT * FROM inventory WHERE id=?', [id]))
 ipcMain.handle('inventory:create', (_, data) => {
-  const { brand, size, pattern, dot, cost_price, sell_price, min_price, quantity, supplier_id, notes } = data
-  const r = run(`INSERT INTO inventory (brand,size,pattern,dot,cost_price,sell_price,min_price,quantity,supplier_id,notes) VALUES (?,?,?,?,?,?,?,?,?,?)`,
-    [brand, size, pattern||'', dot||'', cost_price, sell_price, min_price, quantity, supplier_id||null, notes||''])
+  const { brand, size, pattern, dot, cost_price, sell_price, min_price, quantity, supplier_id, notes, category } = data
+  const r = run(`INSERT INTO inventory (brand,size,pattern,dot,cost_price,sell_price,min_price,quantity,supplier_id,notes,category) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    [brand, size, pattern||'', dot||'', cost_price, sell_price, min_price, quantity, supplier_id||null, notes||'', category||'Tyre'])
   saveDb(getDbPath())
   return { success: true, id: r.lastInsertRowid }
 })
 ipcMain.handle('inventory:update', (_, data) => {
-  const { id, brand, size, pattern, dot, cost_price, sell_price, min_price, quantity, supplier_id, notes } = data
-  run(`UPDATE inventory SET brand=?,size=?,pattern=?,dot=?,cost_price=?,sell_price=?,min_price=?,quantity=?,supplier_id=?,notes=?,updated_at=datetime('now') WHERE id=?`,
-    [brand, size, pattern, dot, cost_price, sell_price, min_price, quantity, supplier_id, notes, id])
+  const { id, brand, size, pattern, dot, cost_price, sell_price, min_price, quantity, supplier_id, notes, category } = data
+  run(`UPDATE inventory SET brand=?,size=?,pattern=?,dot=?,cost_price=?,sell_price=?,min_price=?,quantity=?,supplier_id=?,notes=?,category=?,updated_at=datetime('now') WHERE id=?`,
+    [brand, size, pattern, dot, cost_price, sell_price, min_price, quantity, supplier_id, notes, category||'Tyre', id])
   saveDb(getDbPath())
   return { success: true }
 })
@@ -499,38 +501,21 @@ ipcMain.handle('sales:create', (_, data) => {
       run('UPDATE inventory SET quantity = quantity - ? WHERE id=?', [item.quantity, item.inventory_id])
     }
   }
-  let finalCustomerId = customer_id
-  if (!customer_id && customer_name && customer_name !== 'Walk-in Customer') {
-    const existing = get('SELECT id FROM customers WHERE name=? AND phone=?', [customer_name, ''])
-    if (existing) {
-      finalCustomerId = existing.id
-    } else {
-      const newCust = run('INSERT INTO customers (name, phone, vehicle_plate) VALUES (?,?,?)',
-        [customer_name, '', vehicle_plate||''])
-      finalCustomerId = newCust.lastInsertRowid
-    }
-    if (balance > 0) {
-      run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, finalCustomerId])
-    }
-  } else let finalCustomerId = customer_id
-  if (!customer_id && customer_name && customer_name !== 'Walk-in Customer') {
-    const existing = get('SELECT id FROM customers WHERE name=? AND phone=?', [customer_name, ''])
-    if (existing) {
-      finalCustomerId = existing.id
-    } else {
-      const newCust = run('INSERT INTO customers (name, phone, vehicle_plate) VALUES (?,?,?)',
-        [customer_name, '', vehicle_plate||''])
-      finalCustomerId = newCust.lastInsertRowid
-    }
-    if (balance > 0) {
-      run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, finalCustomerId])
-    }
-  } else if (customer_id && balance > 0) {
+  if (customer_id && balance > 0) {
     run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, customer_id])
+  } else if (!customer_id && customer_name && customer_name !== 'Walk-in Customer') {
+    const existing = get('SELECT id FROM customers WHERE name=? AND phone=?', [customer_name, ''])
+    if (existing) {
+      if (balance > 0) run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, existing.id])
+    } else {
+      const newCust = run('INSERT INTO customers (name, phone, vehicle_plate) VALUES (?,?,?)', [customer_name, '', vehicle_plate||''])
+      if (balance > 0) run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, newCust.lastInsertRowid])
+    }
   }
   saveDb(getDbPath())
   return { success: true, id: saleId, invoice_no }
 })
+
 ipcMain.handle('sales:delete', (_, id) => {
   const sale = get('SELECT * FROM sales WHERE id=?', [id])
   const items = all('SELECT * FROM sale_items WHERE sale_id=?', [id])
@@ -545,7 +530,6 @@ ipcMain.handle('sales:delete', (_, id) => {
   saveDb(getDbPath())
   return { success: true }
 })
-
 ipcMain.handle('expenses:list', (_, filters = {}) => {
   let q = `SELECT e.*, u.name as created_by_name FROM expenses e LEFT JOIN users u ON e.created_by=u.id`
   const params = []
@@ -602,7 +586,116 @@ ipcMain.handle('reports:salesReport', (_, { date_from, date_to }) => {
 ipcMain.handle('reports:topProducts', (_, { date_from, date_to }) => {
   return all(`SELECT si.brand, si.size, si.pattern, SUM(si.quantity) as sold, SUM(si.total_price) as revenue FROM sale_items si JOIN sales s ON si.sale_id=s.id WHERE date(s.created_at) BETWEEN ? AND ? GROUP BY si.brand, si.size ORDER BY sold DESC LIMIT 20`, [date_from, date_to])
 })
+ipcMain.handle('sales:update', (_, data) => {
+  const { id, customer_id, customer_name, vehicle_plate, vehicle_km, items, discount, paid, notes } = data
+  const oldSale = get('SELECT * FROM sales WHERE id=?', [id])
+  const oldItems = all('SELECT * FROM sale_items WHERE sale_id=?', [id])
+  if (!oldSale) return { success: false, error: 'Sale not found' }
 
+  // Reverse old inventory
+  for (const item of oldItems) {
+    if (item.inventory_id) run('UPDATE inventory SET quantity = quantity + ? WHERE id=?', [item.quantity, item.inventory_id])
+  }
+
+  // Reverse old customer balance
+  if (oldSale.customer_id && oldSale.balance > 0) {
+    run('UPDATE customers SET balance = balance - ? WHERE id=?', [oldSale.balance, oldSale.customer_id])
+  }
+
+  // Calculate new totals
+  const subtotal = items.reduce((s, i) => s + i.total_price, 0)
+  const total = subtotal - (discount || 0)
+  const balance = total - (paid || 0)
+  const payment_status = balance <= 0 ? 'paid' : (paid > 0 ? 'partial' : 'unpaid')
+
+  // Update sale
+  run(`UPDATE sales SET customer_id=?,customer_name=?,vehicle_plate=?,vehicle_km=?,subtotal=?,discount=?,total=?,paid=?,balance=?,payment_status=?,notes=? WHERE id=?`,
+    [customer_id||null, customer_name||'Walk-in', vehicle_plate||'', vehicle_km||'', subtotal, discount||0, total, paid||0, balance, payment_status, notes||'', id])
+
+  // Delete old items
+  run('DELETE FROM sale_items WHERE sale_id=?', [id])
+
+  // Insert new items
+  for (const item of items) {
+    run('INSERT INTO sale_items (sale_id,inventory_id,brand,size,pattern,quantity,unit_price,total_price) VALUES (?,?,?,?,?,?,?,?)',
+      [id, item.inventory_id||null, item.brand, item.size, item.pattern||'', item.quantity, item.unit_price, item.total_price])
+    if (item.inventory_id) {
+      run('UPDATE inventory SET quantity = quantity - ? WHERE id=?', [item.quantity, item.inventory_id])
+    }
+  }
+
+  // Apply new customer balance
+  if (customer_id && balance > 0) {
+    run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, customer_id])
+  }
+
+  saveDb(getDbPath())
+  return { success: true }
+})
+
+ipcMain.handle('customers:sales', (_, id) => {
+  const sales = all(`SELECT * FROM sales WHERE customer_id=? ORDER BY created_at DESC`, [id])
+  for (const sale of sales) {
+    sale.items = all('SELECT * FROM sale_items WHERE sale_id=?', [sale.id])
+  }
+  return sales
+})
+
+ipcMain.handle('purchases:list', (_, supplierId) => {
+  if (supplierId) {
+    return all(`SELECT p.*, s.name as supplier_name FROM purchase_batches p LEFT JOIN suppliers s ON p.supplier_id=s.id WHERE p.supplier_id=? ORDER BY p.date DESC`, [supplierId])
+  }
+  return all(`SELECT p.*, s.name as supplier_name FROM purchase_batches p LEFT JOIN suppliers s ON p.supplier_id=s.id ORDER BY p.date DESC`)
+})
+
+ipcMain.handle('purchases:get', (_, id) => {
+  const batch = get('SELECT * FROM purchase_batches WHERE id=?', [id])
+  if (!batch) return null
+  batch.items = all('SELECT * FROM purchase_items WHERE batch_id=?', [id])
+  return batch
+})
+
+ipcMain.handle('purchases:create', (_, data) => {
+  const { supplier_id, items, notes, date } = data
+  const total = items.reduce((s, i) => s + i.total_price, 0)
+
+  const r = run('INSERT INTO purchase_batches (supplier_id, total, notes, date) VALUES (?,?,?,?)',
+    [supplier_id||null, total, notes||'', date])
+  const batchId = r.lastInsertRowid
+
+  for (const item of items) {
+    run('INSERT INTO purchase_items (batch_id,inventory_id,brand,size,pattern,quantity,cost_price,total_price) VALUES (?,?,?,?,?,?,?,?)',
+      [batchId, item.inventory_id||null, item.brand, item.size, item.pattern||'', item.quantity, item.cost_price, item.total_price])
+    if (item.inventory_id) {
+      run('UPDATE inventory SET quantity = quantity + ?, cost_price=? WHERE id=?', [item.quantity, item.cost_price, item.inventory_id])
+    }
+  }
+
+  // Add to supplier balance
+  if (supplier_id) {
+    run('UPDATE suppliers SET balance = balance + ? WHERE id=?', [total, supplier_id])
+    run('INSERT INTO supplier_payments (supplier_id,amount,type,notes,date) VALUES (?,?,?,?,?)',
+      [supplier_id, total, 'purchase', notes||'', date])
+  }
+
+  saveDb(getDbPath())
+  return { success: true, id: batchId }
+})
+
+ipcMain.handle('purchases:delete', (_, id) => {
+  const batch = get('SELECT * FROM purchase_batches WHERE id=?', [id])
+  const items = all('SELECT * FROM purchase_items WHERE batch_id=?', [id])
+  for (const item of items) {
+    if (item.inventory_id) run('UPDATE inventory SET quantity = quantity - ? WHERE id=?', [item.quantity, item.inventory_id])
+  }
+  if (batch && batch.supplier_id) {
+    run('UPDATE suppliers SET balance = balance - ? WHERE id=?', [batch.total, batch.supplier_id])
+  }
+  run('DELETE FROM purchase_items WHERE batch_id=?', [id])
+  run('DELETE FROM purchase_batches WHERE id=?', [id])
+  saveDb(getDbPath())
+  return { success: true }
+})
 // ─── Window ───────────────────────────────────────────────────────────────────
 function createWindow() {
   const win = new BrowserWindow({

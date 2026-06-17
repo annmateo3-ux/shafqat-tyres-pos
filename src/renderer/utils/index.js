@@ -15,21 +15,22 @@ export const fmt = {
   monthStart: () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
 }
 
-export const api = window.electron || {}
-
 export function invoke(channel, ...args) {
-  const key = channel.replace(':', '_')
+  const key = channel.split(':').map((p, i) => i === 0 ? p : p.charAt(0).toUpperCase() + p.slice(1)).join('')
+  const api = window.electron
+  if (!api) { console.warn('IPC not available:', channel); return Promise.resolve(null) }
   if (!api[key]) {
-    console.warn('IPC not available:', channel)
-    return Promise.resolve(null)
+    const altKey = channel.replace(':', '_').replace(':', '_')
+    if (!api[altKey]) { console.warn('IPC handler not found:', channel, 'tried:', key, altKey); return Promise.resolve(null) }
+    return api[altKey](...args)
   }
   return api[key](...args)
 }
 
 export const PAYMENT_STATUS = {
-  paid: { label: 'Paid', cls: 'badge-paid' },
+  paid:    { label: 'Paid',    cls: 'badge-paid' },
   partial: { label: 'Partial', cls: 'badge-partial' },
-  unpaid: { label: 'Unpaid', cls: 'badge-unpaid' },
+  unpaid:  { label: 'Unpaid',  cls: 'badge-unpaid' },
 }
 
 export const EXPENSE_CATEGORIES = ['Fuel', 'Maintenance', 'Salary', 'Rent', 'Utilities', 'Marketing', 'Miscellaneous']

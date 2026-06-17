@@ -3,8 +3,237 @@ import { invoke, fmt, PAYMENT_STATUS } from '../../utils/index.js'
 import { useApp } from '../../store/AppContext.jsx'
 import Modal from '../ui/Modal.jsx'
 import ConfirmDialog from '../ui/ConfirmDialog.jsx'
-import { Plus, Trash, Search, Printer, Eye, RefreshCw, X, ShoppingCart } from '../ui/Icons.jsx'
+import { Plus, Trash, Search, Printer, Eye, RefreshCw, X, ShoppingCart, Edit } from '../ui/Icons.jsx'
+// ─── Edit Sale Modal ──────────────────────────────────────────────────────────
+function EditSaleModal({ sale, onClose, onSave }) {
+  const { user, showToast } = useApp()
+  const [customers, setCustomers] = useState([])
+  const [inventory, setInventory] = useState([])
+  const [customer, setCustomer] = useState({ id: sale.customer_id || '', name: sale.customer_name || '', plate: sale.vehicle_plate || '', km: sale.vehicle_km || '' })
+  const [items, setItems] = useState((sale.items || []).map(i => ({ ...i, max_qty: 999, min_price: 0 })))
+  const [discount, setDiscount] = useState(sale.discount || 0)
+  const [paid, setPaid] = useState(sale.paid || 0)
+  const [notes, setNotes] = useState(sale.notes || '')
+  const [saving, setSaving] = useState(false)
+  const [showPicker, setShowPicker] = useState(false)
+  const [invSearch, setInvSearch] = useState('')
 
+  useEffect(() => {
+    Promise.all([invoke('customers:list'), invoke('inventory:list')]).then(([c, inv]) => {
+      setCustomers(c || [])
+      setInventory(inv || [])
+    })
+  }, [])
+
+  const filteredInv = useMemo(() => {
+    const q = invSearch.toLowerCase()
+    return inventory.filter(i => !q || [i.brand, i.size, i.pattern].some(f => f?.toLowerCase().includes(q)))
+  }, [inventory, invSearch])
+
+  const addItem = (inv) => {
+    setItems(prev => {
+      const existing = prev.findIndex(i => i.inventory_id === inv.id)
+      if (existing >= 0) {
+        const updated = [...prev]
+        updated[existing].quantity += 1
+        updated[existing].total_price = updated[existing].quantity * updated[existing].unit_price
+        return updated
+      }
+      return [...prev, {
+        inventory_id: inv.id, brand: inv.brand, size: inv.size, pattern: inv.pattern || '',
+        quantity: 1, unit_price: inv.sell_price, total_price: inv.sell_price,
+        max_qty: 999, min_price: inv.min_price,
+      }]
+    })
+    setShowPicker(false)
+    setInvSearch('')
+  }
+
+  const updateItem = (idx, key, val) => {
+    setItems(prev => {
+      const updated = [...prev]
+      updated[idx] = { ...updated[idx], [key]: Number(val) }
+      updated[idx].total_price = updated[idx].quantity * updated[idx].unit_price
+      return updated
+    })
+  }
+
+  const removeItem = (idx) => setItems(prev => prev.filter((_, i) => i !== idx))
+
+  const subtotal = items.reduce((s, i) => s + i.total_price, 0)
+  const total = subtotal - Number(discount)
+  const balance = total - Number(paid)
+
+  const handleSave = async () => {
+    if (items.length === 0) { showToast('Add at least one item', 'error'); return }
+    setSaving(true)
+    const res = await invoke('sales:update', {
+      id: sale.id,
+      customer_id: customer.id || null,
+      customer_name: customer.name || 'Walk-in Customer',
+      vehicle_plate: customer.plate,
+      vehicle_km: customer.km,
+      items: items.map(i => ({ ...i, quantity: Number(i.quantity), unit_price: Number(i.unit_price), total_price: Number(i.total_price) })),
+      discount: Number(discount),
+      paid: Number(paid),
+      notes,
+    })
+    setSaving(false)
+    if (res?.success) { showToast('Sale updated'); onSave() }
+    else showToast('Failed to update', 'error')
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
+      <div className="animate-modal-in" style={{
+        position: 'relative', width: '100%', maxWidth: '900px',
+        background: '#0f0f1a', border: '1px solid #2a2a3d', borderRadius: '20px',
+        maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+        boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid #1e1e2e', flexShrink: 0 }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'white' }}>Edit Sale — {sale.invoice_no}</h2>
+          <button onClick={onClose} style={{ padding: '6px', borderRadius: '8px', border: 'none', background: 'none', color: '#4a4a6a', cursor: 'pointer' }}
+            onMouseEnter={e => e.currentTarget.style.color='white'} onMouseLeave={e => e.currentTarget.style.color='#4a4a6a'}>✕</button>
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1, padding: '24px', display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Customer */}
+            <div style={{ background: '#141420', border: '1px solid #1e1e2e', borderRadius: '14px', padding: '16px' }}>
+              <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'white', marginBottom: '12px' }}>Customer</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label className="label">Select</label>
+                  <select className="input" value={customer.id} onChange={e => {
+                    const c = customers.find(c => c.id === Number(e.target.value))
+                    setCustomer(c ? { id: c.id, name: c.name, plate: c.vehicle_plate || '', km: '' } : { id: '', name: '', plate: '', km: '' })
+                  }}>
+                    <option value="">Walk-in</option>
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Name</label>
+                  <input className="input" value={customer.name} onChange={e => setCustomer(p => ({ ...p, name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label">Vehicle</label>
+                  <input className="input" value={customer.plate} onChange={e => setCustomer(p => ({ ...p, plate: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label">KM</label>
+                  <input type="number" className="input" value={customer.km} onChange={e => setCustomer(p => ({ ...p, km: e.target.value }))} />
+                </div>
+              </div>
+            </div>
+
+            {/* Items */}
+            <div style={{ background: '#141420', border: '1px solid #1e1e2e', borderRadius: '14px', padding: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'white' }}>Items</h3>
+                <button onClick={() => setShowPicker(true)} className="btn-primary" style={{ fontSize: '12px', padding: '5px 12px' }}>+ Add</button>
+              </div>
+              <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #1e1e2e' }}>
+                    <th style={{ padding: '6px', textAlign: 'left', color: '#6b7280', fontSize: '11px' }}>Item</th>
+                    <th style={{ padding: '6px', textAlign: 'center', color: '#6b7280', fontSize: '11px', width: '60px' }}>Qty</th>
+                    <th style={{ padding: '6px', textAlign: 'right', color: '#6b7280', fontSize: '11px', width: '110px' }}>Price</th>
+                    <th style={{ padding: '6px', textAlign: 'right', color: '#6b7280', fontSize: '11px', width: '110px' }}>Total</th>
+                    <th style={{ width: '30px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #1a1a2a' }}>
+                      <td style={{ padding: '6px' }}>
+                        <div style={{ fontWeight: 600, color: 'white', fontSize: '12px' }}>{item.brand}</div>
+                        <div style={{ fontSize: '10px', color: '#6b7280' }}>{item.size}</div>
+                      </td>
+                      <td style={{ padding: '6px', textAlign: 'center' }}>
+                        <input type="number" min="1" className="input" style={{ width: '55px', textAlign: 'center', padding: '4px', fontSize: '12px' }}
+                          value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} />
+                      </td>
+                      <td style={{ padding: '6px' }}>
+                        <input type="number" className="input" style={{ textAlign: 'right', padding: '4px', fontSize: '12px' }}
+                          value={item.unit_price} onChange={e => updateItem(idx, 'unit_price', e.target.value)} />
+                      </td>
+                      <td style={{ padding: '6px', textAlign: 'right', fontWeight: 600, color: 'white', fontSize: '12px' }}>{fmt.currency(item.total_price)}</td>
+                      <td style={{ padding: '6px' }}>
+                        <button onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer' }}
+                          onMouseEnter={e => e.currentTarget.style.color='#ef4444'} onMouseLeave={e => e.currentTarget.style.color='#6b7280'}>✕</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {showPicker && (
+                <div style={{ marginTop: '12px', background: '#0f0f1a', border: '1px solid #2a2a3d', borderRadius: '12px', padding: '12px' }}>
+                  <input autoFocus className="input" placeholder="Search..." value={invSearch} onChange={e => setInvSearch(e.target.value)} style={{ marginBottom: '8px' }} />
+                  <div style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                    {filteredInv.map(inv => (
+                      <button key={inv.id} onClick={() => addItem(inv)} style={{
+                        display: 'flex', justifyContent: 'space-between', width: '100%',
+                        padding: '8px', borderRadius: '8px', border: 'none', background: 'none', cursor: 'pointer',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background='#1e1e2e'}
+                      onMouseLeave={e => e.currentTarget.style.background='none'}>
+                        <span style={{ color: 'white', fontSize: '12px' }}>{inv.brand} {inv.size}</span>
+                        <span style={{ color: '#ef4444', fontSize: '12px' }}>{fmt.currency(inv.sell_price)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setShowPicker(false)} className="btn-secondary" style={{ width: '100%', marginTop: '8px', fontSize: '12px' }}>Close</button>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="label">Notes</label>
+              <textarea className="input" style={{ height: '60px', resize: 'none' }} value={notes} onChange={e => setNotes(e.target.value)} />
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div style={{ background: '#141420', border: '1px solid #1e1e2e', borderRadius: '14px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', alignSelf: 'start' }}>
+            <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'white' }}>Payment</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+              <span style={{ color: '#6b7280' }}>Subtotal</span>
+              <span style={{ color: 'white' }}>{fmt.currency(subtotal)}</span>
+            </div>
+            <div>
+              <label className="label">Discount</label>
+              <input type="number" className="input" value={discount} onChange={e => setDiscount(Number(e.target.value))} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 700, borderTop: '1px solid #1e1e2e', paddingTop: '10px' }}>
+              <span style={{ color: '#6b7280' }}>Total</span>
+              <span style={{ color: '#ef4444' }}>{fmt.currency(total)}</span>
+            </div>
+            <div>
+              <label className="label">Amount Paid</label>
+              <input type="number" className="input" value={paid} onChange={e => setPaid(Number(e.target.value))} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+              <span style={{ color: '#6b7280' }}>Balance</span>
+              <span style={{ color: balance > 0 ? '#ef4444' : '#22c55e', fontWeight: 700 }}>{fmt.currency(Math.max(0, balance))}</span>
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '12px' }}>
+              <span className={`badge-${balance <= 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid'}`}>
+                {balance <= 0 ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid'}
+              </span>
+            </div>
+            <button onClick={handleSave} disabled={saving || items.length === 0} className="btn-primary" style={{ width: '100%', padding: '10px', fontSize: '14px' }}>
+              {saving ? 'Saving...' : '💾 Save Changes'}
+            </button>
+            <button onClick={onClose} className="btn-secondary" style={{ width: '100%', fontSize: '13px' }}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 // ─── Invoice Print View ───────────────────────────────────────────────────────
 function numberToWords(n) {
   const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen']
@@ -182,6 +411,7 @@ function SalesList({ onNewSale, isAdmin }) {
   const [viewItems, setViewItems] = useState([])
   const [company, setCompany] = useState(null)
   const [deleteId, setDeleteId] = useState(null)
+  const [editSale, setEditSale] = useState(null)
   const { showToast } = useApp()
 
   const load = async () => {
@@ -207,6 +437,11 @@ function SalesList({ onNewSale, isAdmin }) {
     const full = await invoke('sales:get', sale.id)
     setViewSale(full)
     setViewItems(full?.items || [])
+  }
+
+  const openEdit = async (sale) => {
+    const full = await invoke('sales:get', sale.id)
+    setEditSale(full)
   }
 
   const handleDelete = async () => {
@@ -287,12 +522,17 @@ function SalesList({ onNewSale, isAdmin }) {
                   <td className="px-4 py-3 text-dark-300 text-xs">{fmt.dateTime(s.created_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => openSale(s)} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-brand-400 transition-colors">
-                        <Eye size={14} />
+                      <button onClick={() => openSale(s)} className="action-btn" title="View">
+                        <Eye size={15} />
                       </button>
                       {isAdmin && (
-                        <button onClick={() => setDeleteId(s.id)} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-red-400 transition-colors">
-                          <Trash size={14} />
+                        <button onClick={() => openEdit(s)} className="action-btn" title="Edit">
+                          <Edit size={15} />
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button onClick={() => setDeleteId(s.id)} className="action-btn" title="Delete">
+                          <Trash size={15} />
                         </button>
                       )}
                     </div>
@@ -315,6 +555,13 @@ function SalesList({ onNewSale, isAdmin }) {
             <InvoicePrint sale={viewSale} items={viewItems} company={company} />
           </div>
         </Modal>
+      )}
+      {editSale && (
+        <EditSaleModal
+          sale={editSale}
+          onClose={() => setEditSale(null)}
+          onSave={() => { setEditSale(null); load() }}
+        />
       )}
 
       {deleteId && (

@@ -11,6 +11,7 @@ import SuppliersScreen from './components/screens/SuppliersScreen.jsx'
 import ExpensesScreen from './components/screens/ExpensesScreen.jsx'
 import ReportsScreen from './components/screens/ReportsScreen.jsx'
 import SettingsScreen from './components/screens/SettingsScreen.jsx'
+import PurchasesScreen from './components/screens/PurchasesScreen.jsx'
 
 function AppInner() {
   const { user, screen, toast } = useApp()
@@ -18,13 +19,14 @@ function AppInner() {
 
   const screens = {
     dashboard: <Dashboard />,
-    inventory: <InventoryScreen />,
-    sales:     <SalesScreen />,
-    customers: <CustomersScreen />,
-    suppliers: <SuppliersScreen />,
-    expenses:  <ExpensesScreen />,
-    reports:   <ReportsScreen />,
-    settings:  <SettingsScreen />,
+    inventory:  <InventoryScreen />,
+    sales:      <SalesScreen />,
+    customers:  <CustomersScreen />,
+    suppliers:  <SuppliersScreen />,
+    expenses:   <ExpensesScreen />,
+    purchases:  <PurchasesScreen />,
+    reports:    <ReportsScreen />,
+    settings:   <SettingsScreen />,
   }
 
   return (
