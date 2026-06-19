@@ -46,15 +46,21 @@ export default function ReportsScreen() {
     if (!report?.sales) return []
     const map = {}
     report.sales.forEach(s => {
-      const day = s.created_at?.split('T')[0] || s.created_at?.split(' ')[0]
+      if (!s.created_at) return
+      const day = s.created_at.includes('T') ? s.created_at.split('T')[0] : s.created_at.split(' ')[0]
+      if (!day) return
       if (!map[day]) map[day] = { day, revenue: 0, count: 0 }
       map[day].revenue += s.total
       map[day].count++
     })
-    return Object.values(map).sort((a, b) => a.day.localeCompare(b.day)).map(d => ({
-      ...d,
-      dayLabel: new Date(d.day + 'T00:00').toLocaleDateString('en-PK', { month: 'short', day: 'numeric' })
-    }))
+    return Object.values(map).sort((a, b) => a.day.localeCompare(b.day)).map(d => {
+      const parts = d.day.split('-')
+      const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      return {
+        ...d,
+        dayLabel: isNaN(dateObj.getTime()) ? d.day : dateObj.toLocaleDateString('en-PK', { month: 'short', day: 'numeric' })
+      }
+    })
   }, [report])
 
   return (
@@ -99,10 +105,14 @@ export default function ReportsScreen() {
           {/* Summary Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatBox label="Total Revenue" value={fmt.currency(report.totals?.revenue)} sub={`${report.totals?.count} sales`} color="text-brand-400" />
+            <StatBox label="Cash Collected" value={fmt.currency(report.totals?.collected)} sub="actually received" color="text-green-400" />
+            <StatBox label="Still Owed" value={fmt.currency(report.totals?.outstanding)} sub="pending from customers" color="text-amber-400" />
             <StatBox label="Cost of Goods" value={fmt.currency(report.costOfGoods?.cogs)} color="text-red-400" />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatBox label="Expenses" value={fmt.currency(report.expenses?.total)} color="text-red-400" />
             <StatBox
-              label="Net Profit"
+              label="Net Profit (on paper)"
               value={fmt.currency(profit)}
               sub={report.totals?.revenue > 0 ? `${((profit / report.totals.revenue) * 100).toFixed(1)}% margin` : ''}
               color={profit >= 0 ? 'text-green-400' : 'text-red-400'}

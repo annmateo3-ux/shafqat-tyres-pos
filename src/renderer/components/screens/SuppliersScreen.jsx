@@ -58,14 +58,19 @@ function PaymentModal({ supplier, onClose, onDone }) {
 
   return (
     <div className="space-y-5">
-      <div className="card p-4 flex items-center justify-between">
-        <div>
-          <div className="font-semibold text-white">{supplier.name}</div>
-          <div className="text-xs text-dark-300">{supplier.phone} · {supplier.city}</div>
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="font-semibold text-white">{supplier.name}</div>
+            <div className="text-xs text-dark-300">{supplier.phone} · {supplier.city}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-dark-300">Amount We Owe</div>
+            <div className={`text-xl font-bold ${supplier.balance > 0 ? 'text-red-400' : 'text-green-400'}`}>{fmt.currency(supplier.balance)}</div>
+          </div>
         </div>
-        <div className="text-right">
-          <div className="text-xs text-dark-300">Amount Owed</div>
-          <div className={`text-xl font-bold ${supplier.balance > 0 ? 'text-red-400' : 'text-green-400'}`}>{fmt.currency(supplier.balance)}</div>
+        <div style={{ fontSize: '11px', color: '#4a4a6a', borderTop: '1px solid #1e1e2e', paddingTop: '8px', marginTop: '4px' }}>
+          Stock purchases increase what we owe. Payments we make reduce it.
         </div>
       </div>
 
@@ -88,16 +93,30 @@ function PaymentModal({ supplier, onClose, onDone }) {
 
       <div>
         <h4 className="text-sm font-semibold text-white mb-3">Transaction History</h4>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
+        <div className="space-y-2 max-h-64 overflow-y-auto">
           {payments.length === 0 ? <p className="text-dark-300 text-sm">No transactions yet</p> : payments.map(p => (
-            <div key={p.id} className="flex items-center justify-between p-3 bg-dark-600 rounded-xl text-sm">
-              <div>
-                <div className={`font-medium ${p.type === 'purchase' ? 'text-red-400' : 'text-green-400'}`}>
-                  {p.type === 'purchase' ? '+ Purchase' : '- Payment'} {fmt.currency(p.amount)}
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#1a1a2a', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '30px', height: '30px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: p.type === 'purchase' ? '#ef444420' : '#22c55e20',
+                  color: p.type === 'purchase' ? '#ef4444' : '#22c55e', fontSize: '16px', fontWeight: 700,
+                }}>
+                  {p.type === 'purchase' ? '+' : '−'}
                 </div>
-                {p.notes && <div className="text-xs text-dark-300">{p.notes}</div>}
+                <div>
+                  <div style={{ fontWeight: 600, color: 'white', fontSize: '13px' }}>
+                    {p.type === 'purchase' ? 'Stock Purchase' : 'Payment Made'}
+                  </div>
+                  {p.notes && <div style={{ fontSize: '11px', color: '#6b7280' }}>{p.notes}</div>}
+                </div>
               </div>
-              <div className="text-dark-300 text-xs">{fmt.date(p.date)}</div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontWeight: 700, fontSize: '13px', color: p.type === 'purchase' ? '#ef4444' : '#22c55e' }}>
+                  {fmt.currency(p.amount)}
+                </div>
+                <div style={{ fontSize: '11px', color: '#6b7280' }}>{fmt.date(p.date)}</div>
+              </div>
             </div>
           ))}
         </div>

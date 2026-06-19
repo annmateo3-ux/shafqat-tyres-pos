@@ -39,11 +39,14 @@ function CustomerForm({ item, onSave, onClose }) {
 function PaymentModal({ customer, onClose, onDone }) {
   const { showToast } = useApp()
   const [payments, setPayments] = useState([])
+  const [sales, setSales] = useState([])
+  const [tab, setTab] = useState('payments')
   const [form, setForm] = useState({ amount: '', notes: '', date: new Date().toISOString().split('T')[0] })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     invoke('customers:payments', customer.id).then(p => setPayments(p || []))
+    invoke('customers:sales', customer.id).then(s => setSales(s || []))
   }, [customer.id])
 
   const handlePay = async () => {
@@ -81,9 +84,23 @@ function PaymentModal({ customer, onClose, onDone }) {
         </div>
       )}
 
-      <div>
-        <h4 className="text-sm font-semibold text-white mb-3">Payment History</h4>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
+      <div style={{ display: 'flex', gap: '6px', background: '#1a1a2a', borderRadius: '12px', padding: '4px' }}>
+        <button onClick={() => setTab('payments')} style={{
+          flex: 1, padding: '8px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+          fontSize: '13px', fontWeight: 500, transition: 'all 0.2s',
+          background: tab === 'payments' ? '#ef4444' : 'transparent',
+          color: tab === 'payments' ? 'white' : '#6b7280',
+        }}>Payment History</button>
+        <button onClick={() => setTab('sales')} style={{
+          flex: 1, padding: '8px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+          fontSize: '13px', fontWeight: 500, transition: 'all 0.2s',
+          background: tab === 'sales' ? '#ef4444' : 'transparent',
+          color: tab === 'sales' ? 'white' : '#6b7280',
+        }}>Service History ({sales.length})</button>
+      </div>
+
+      {tab === 'payments' ? (
+        <div className="space-y-2 max-h-64 overflow-y-auto">
           {payments.length === 0 ? <p className="text-dark-300 text-sm">No payments yet</p> : payments.map(p => (
             <div key={p.id} className="flex items-center justify-between p-3 bg-dark-600 rounded-xl text-sm">
               <div>
@@ -94,7 +111,29 @@ function PaymentModal({ customer, onClose, onDone }) {
             </div>
           ))}
         </div>
-      </div>
+      ) : (
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {sales.length === 0 ? <p className="text-dark-300 text-sm">No service history yet</p> : sales.map(s => (
+            <div key={s.id} style={{ padding: '12px', background: '#1a1a2a', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#ef4444' }}>{s.invoice_no}</span>
+                <span className={`badge-${s.payment_status}`}>{s.payment_status}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>
+                <span>{fmt.date(s.created_at)}</span>
+                {s.vehicle_km && <span>{Number(s.vehicle_km).toLocaleString()} km</span>}
+              </div>
+              <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '6px' }}>
+                {s.items?.map(i => `${i.brand} ${i.size}`).join(', ')}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600 }}>
+                <span style={{ color: 'white' }}>{fmt.currency(s.total)}</span>
+                {s.balance > 0 && <span style={{ color: '#ef4444' }}>Due: {fmt.currency(s.balance)}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

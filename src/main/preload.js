@@ -13,6 +13,7 @@ const channels = [
   'purchases:list', 'purchases:get', 'purchases:create', 'purchases:delete',
   'expenses:list', 'expenses:create', 'expenses:update', 'expenses:delete',
   'reports:dashboard', 'reports:salesReport', 'reports:topProducts',
+  'activity:list',
   'window:print',
 ]
 

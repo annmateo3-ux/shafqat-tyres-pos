@@ -98,7 +98,12 @@ function run(sql, params = []) {
     throw e
   }
 }
-
+function logActivity(action, entity, entity_id, description, user_id, user_name) {
+  try {
+    run('INSERT INTO activity_log (action, entity, entity_id, description, user_id, user_name) VALUES (?,?,?,?,?,?)',
+      [action, entity, entity_id||null, description||'', user_id||null, user_name||'System'])
+  } catch(e) { console.error('Log error:', e.message) }
+}
 function createTables() {
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -223,8 +228,32 @@ function createTables() {
     id INTEGER PRIMARY KEY,
     done INTEGER DEFAULT 0
   )`)
+
+  db.run(`CREATE TABLE IF NOT EXISTS activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    entity TEXT NOT NULL,
+    entity_id INTEGER,
+    description TEXT,
+    user_id INTEGER REFERENCES users(id),
+    user_name TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`)
 }
 function migrateDatabase() {
+  try {
+    db.run(`CREATE TABLE IF NOT EXISTS activity_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      entity TEXT NOT NULL,
+      entity_id INTEGER,
+      description TEXT,
+      user_id INTEGER REFERENCES users(id),
+      user_name TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`)
+    console.log('Migration: ensured activity_log table')
+  } catch(e) {}
   try {
     db.run(`ALTER TABLE sales ADD COLUMN vehicle_km TEXT DEFAULT ''`)
     console.log('Migration: added vehicle_km column')
@@ -232,6 +261,31 @@ function migrateDatabase() {
   try {
     db.run(`ALTER TABLE inventory ADD COLUMN category TEXT DEFAULT 'Tyre'`)
     console.log('Migration: added category column')
+  } catch(e) {}
+  try {
+    db.run(`CREATE TABLE IF NOT EXISTS purchase_batches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supplier_id INTEGER REFERENCES suppliers(id),
+      total REAL NOT NULL DEFAULT 0,
+      notes TEXT,
+      date TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`)
+    console.log('Migration: ensured purchase_batches table')
+  } catch(e) {}
+  try {
+    db.run(`CREATE TABLE IF NOT EXISTS purchase_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      batch_id INTEGER NOT NULL REFERENCES purchase_batches(id),
+      inventory_id INTEGER REFERENCES inventory(id),
+      brand TEXT,
+      size TEXT,
+      pattern TEXT,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      cost_price REAL NOT NULL DEFAULT 0,
+      total_price REAL NOT NULL DEFAULT 0
+    )`)
+    console.log('Migration: ensured purchase_items table')
   } catch(e) {}
 }
 
@@ -342,6 +396,7 @@ function seedData() {
 ipcMain.handle('auth:login', (_, { username, password }) => {
   const user = get('SELECT * FROM users WHERE username=? AND password=? AND active=1', [username, password])
   if (!user) return { success: false, error: 'Invalid credentials' }
+  logActivity('login', 'user', user.id, `${user.name} logged in`, user.id, user.name)
   saveDb(getDbPath())
   return { success: true, user: { id: user.id, username: user.username, role: user.role, name: user.name } }
 })
@@ -456,7 +511,9 @@ ipcMain.handle('inventory:update', (_, data) => {
   return { success: true }
 })
 ipcMain.handle('inventory:delete', (_, id) => {
+  const item = get('SELECT * FROM inventory WHERE id=?', [id])
   run('DELETE FROM inventory WHERE id=?', [id])
+  if (item) logActivity('delete', 'inventory', id, `Deleted ${item.brand} ${item.size}`, null, null)
   saveDb(getDbPath())
   return { success: true }
 })
@@ -487,8 +544,8 @@ ipcMain.handle('sales:create', (_, data) => {
   const total = subtotal - (discount || 0)
   const balance = total - (paid || 0)
   const payment_status = balance <= 0 ? 'paid' : (paid > 0 ? 'partial' : 'unpaid')
-  const count = get('SELECT COUNT(*) as c FROM sales')
-  const invoice_no = `INV-${String((count.c || 0) + 1).padStart(5, '0')}`
+  const maxId = get('SELECT MAX(id) as maxId FROM sales')
+  const invoice_no = `INV-${String((maxId.maxId || 0) + 1).padStart(5, '0')}`
 
   const r = run(`INSERT INTO sales (invoice_no,customer_id,customer_name,vehicle_plate,vehicle_km,subtotal,discount,total,paid,balance,payment_status,notes,created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [invoice_no, customer_id||null, customer_name||'Walk-in', vehicle_plate||'', vehicle_km||'', subtotal, discount||0, total, paid||0, balance, payment_status, notes||'', created_by||null])
@@ -501,17 +558,24 @@ ipcMain.handle('sales:create', (_, data) => {
       run('UPDATE inventory SET quantity = quantity - ? WHERE id=?', [item.quantity, item.inventory_id])
     }
   }
+  let finalCustomerId = customer_id
   if (customer_id && balance > 0) {
     run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, customer_id])
   } else if (!customer_id && customer_name && customer_name !== 'Walk-in Customer') {
     const existing = get('SELECT id FROM customers WHERE name=? AND phone=?', [customer_name, ''])
     if (existing) {
+      finalCustomerId = existing.id
       if (balance > 0) run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, existing.id])
     } else {
       const newCust = run('INSERT INTO customers (name, phone, vehicle_plate) VALUES (?,?,?)', [customer_name, '', vehicle_plate||''])
-      if (balance > 0) run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, newCust.lastInsertRowid])
+      finalCustomerId = newCust.lastInsertRowid
+      if (balance > 0) run('UPDATE customers SET balance = balance + ? WHERE id=?', [balance, finalCustomerId])
+    }
+    if (finalCustomerId) {
+      run('UPDATE sales SET customer_id=? WHERE id=?', [finalCustomerId, saleId])
     }
   }
+  logActivity('create', 'sale', saleId, `Sale ${invoice_no} for ${customer_name||'Walk-in'} — Rs ${total}`, created_by, null)
   saveDb(getDbPath())
   return { success: true, id: saleId, invoice_no }
 })
@@ -527,6 +591,7 @@ ipcMain.handle('sales:delete', (_, id) => {
   }
   run('DELETE FROM sale_items WHERE sale_id=?', [id])
   run('DELETE FROM sales WHERE id=?', [id])
+  if (sale) logActivity('delete', 'sale', id, `Deleted sale ${sale.invoice_no} — Rs ${sale.total}`, null, null)
   saveDb(getDbPath())
   return { success: true }
 })
@@ -553,7 +618,9 @@ ipcMain.handle('expenses:update', (_, data) => {
   return { success: true }
 })
 ipcMain.handle('expenses:delete', (_, id) => {
+  const exp = get('SELECT * FROM expenses WHERE id=?', [id])
   run('DELETE FROM expenses WHERE id=?', [id])
+  if (exp) logActivity('delete', 'expense', id, `Deleted expense: ${exp.category} — Rs ${exp.amount}`, null, null)
   saveDb(getDbPath())
   return { success: true }
 })
@@ -577,7 +644,7 @@ ipcMain.handle('reports:dashboard', () => {
 
 ipcMain.handle('reports:salesReport', (_, { date_from, date_to }) => {
   const sales = all(`SELECT s.*, u.name as created_by_name FROM sales s LEFT JOIN users u ON s.created_by=u.id WHERE date(s.created_at) BETWEEN ? AND ? ORDER BY s.created_at DESC`, [date_from, date_to])
-  const totals = get(`SELECT COALESCE(SUM(total),0) as revenue, COALESCE(SUM(discount),0) as discounts, COUNT(*) as count FROM sales WHERE date(created_at) BETWEEN ? AND ?`, [date_from, date_to])
+  const totals = get(`SELECT COALESCE(SUM(total),0) as revenue, COALESCE(SUM(discount),0) as discounts, COALESCE(SUM(paid),0) as collected, COALESCE(SUM(balance),0) as outstanding, COUNT(*) as count FROM sales WHERE date(created_at) BETWEEN ? AND ?`, [date_from, date_to])
   const expenses = get(`SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE date BETWEEN ? AND ?`, [date_from, date_to])
   const costOfGoods = get(`SELECT COALESCE(SUM(si.quantity * i.cost_price),0) as cogs FROM sale_items si JOIN sales s ON si.sale_id=s.id LEFT JOIN inventory i ON si.inventory_id=i.id WHERE date(s.created_at) BETWEEN ? AND ?`, [date_from, date_to])
   return { sales, totals, expenses, costOfGoods }
@@ -585,6 +652,9 @@ ipcMain.handle('reports:salesReport', (_, { date_from, date_to }) => {
 
 ipcMain.handle('reports:topProducts', (_, { date_from, date_to }) => {
   return all(`SELECT si.brand, si.size, si.pattern, SUM(si.quantity) as sold, SUM(si.total_price) as revenue FROM sale_items si JOIN sales s ON si.sale_id=s.id WHERE date(s.created_at) BETWEEN ? AND ? GROUP BY si.brand, si.size ORDER BY sold DESC LIMIT 20`, [date_from, date_to])
+})
+ipcMain.handle('activity:list', (_, limit = 100) => {
+  return all(`SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?`, [limit])
 })
 ipcMain.handle('sales:update', (_, data) => {
   const { id, customer_id, customer_name, vehicle_plate, vehicle_km, items, discount, paid, notes } = data
