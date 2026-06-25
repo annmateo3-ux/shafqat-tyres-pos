@@ -3,7 +3,18 @@
 @tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
+:root {
+  --c-red: #e0696f;
+  --c-red-bg: #e0696f12;
+  --c-red-border: #e0696f30;
+  --c-yellow: #d4b04a;
+  --c-yellow-bg: #d4b04a12;
+  --c-yellow-border: #d4b04a30;
+  --c-green: #5fad7e;
+  --c-green-bg: #5fad7e12;
+  --c-green-border: #5fad7e30;
+  --c-white: #e8e8ec;
+}
 @layer base {
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {

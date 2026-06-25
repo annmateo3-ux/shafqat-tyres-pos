@@ -287,7 +287,15 @@ function migrateDatabase() {
     )`)
     console.log('Migration: ensured purchase_items table')
   } catch(e) {}
-}
+ try {
+    db.run(`ALTER TABLE inventory ADD COLUMN shipping_cost REAL DEFAULT 0`)
+    console.log('Migration: added shipping_cost column')
+  } catch(e) {}
+  try {
+    db.run(`ALTER TABLE purchase_items ADD COLUMN shipping_cost REAL DEFAULT 0`)
+    console.log('Migration: added shipping_cost to purchase_items')
+  } catch(e) {}
+}  
 
 function seedData() {
   const seedRow = get('SELECT done FROM seed_done WHERE id=1')
@@ -497,16 +505,17 @@ ipcMain.handle('inventory:list', () => {
 })
 ipcMain.handle('inventory:get', (_, id) => get('SELECT * FROM inventory WHERE id=?', [id]))
 ipcMain.handle('inventory:create', (_, data) => {
-  const { brand, size, pattern, dot, cost_price, sell_price, min_price, quantity, supplier_id, notes, category } = data
-  const r = run(`INSERT INTO inventory (brand,size,pattern,dot,cost_price,sell_price,min_price,quantity,supplier_id,notes,category) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    [brand, size, pattern||'', dot||'', cost_price, sell_price, min_price, quantity, supplier_id||null, notes||'', category||'Tyre'])
+  const { brand, size, pattern, dot, cost_price, shipping_cost, sell_price, min_price, quantity, supplier_id, notes, category } = data
+  const total_cost = (Number(cost_price)||0) + (Number(shipping_cost)||0)
+  const r = run(`INSERT INTO inventory (brand,size,pattern,dot,cost_price,shipping_cost,sell_price,min_price,quantity,supplier_id,notes,category) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [brand, size, pattern||'', dot||'', cost_price, shipping_cost||0, sell_price, min_price, quantity, supplier_id||null, notes||'', category||'Tyre'])
   saveDb(getDbPath())
   return { success: true, id: r.lastInsertRowid }
 })
 ipcMain.handle('inventory:update', (_, data) => {
-  const { id, brand, size, pattern, dot, cost_price, sell_price, min_price, quantity, supplier_id, notes, category } = data
-  run(`UPDATE inventory SET brand=?,size=?,pattern=?,dot=?,cost_price=?,sell_price=?,min_price=?,quantity=?,supplier_id=?,notes=?,category=?,updated_at=datetime('now') WHERE id=?`,
-    [brand, size, pattern, dot, cost_price, sell_price, min_price, quantity, supplier_id, notes, category||'Tyre', id])
+  const { id, brand, size, pattern, dot, cost_price, shipping_cost, sell_price, min_price, quantity, supplier_id, notes, category } = data
+  run(`UPDATE inventory SET brand=?,size=?,pattern=?,dot=?,cost_price=?,shipping_cost=?,sell_price=?,min_price=?,quantity=?,supplier_id=?,notes=?,category=?,updated_at=datetime('now') WHERE id=?`,
+    [brand, size, pattern, dot, cost_price, shipping_cost||0, sell_price, min_price, quantity, supplier_id, notes, category||'Tyre', id])
   saveDb(getDbPath())
   return { success: true }
 })
@@ -634,14 +643,18 @@ ipcMain.handle('reports:dashboard', () => {
   const totalInventoryQty = get(`SELECT COALESCE(SUM(quantity),0) as qty FROM inventory`)
   const pendingBalance = get(`SELECT COALESCE(SUM(balance),0) as bal FROM customers WHERE balance > 0`)
   const lowStock = get(`SELECT COUNT(*) as c FROM inventory WHERE quantity <= 3`)
+  const lowStockItems = all(`SELECT * FROM inventory WHERE quantity <= 3 ORDER BY quantity LIMIT 5`)
   const todayExpenses = get(`SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE date=?`, [today])
   const monthExpenses = get(`SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE strftime('%Y-%m',date)=?`, [month])
   const recentSales = all(`SELECT invoice_no, customer_name, total, payment_status, created_at FROM sales ORDER BY created_at DESC LIMIT 8`)
   const last7days = all(`SELECT date(created_at) as day, COALESCE(SUM(total),0) as revenue, COUNT(*) as count FROM sales WHERE date(created_at) >= date('now','-6 days') GROUP BY date(created_at) ORDER BY day`)
   const topProducts = all(`SELECT si.brand, si.size, SUM(si.quantity) as sold, SUM(si.total_price) as revenue FROM sale_items si WHERE si.sale_id IN (SELECT id FROM sales WHERE strftime('%Y-%m',created_at)=?) GROUP BY si.brand, si.size ORDER BY sold DESC LIMIT 5`, [month])
-  return { todaySales, monthSales, totalInventoryValue, totalInventoryQty, pendingBalance, lowStock, todayExpenses, monthExpenses, recentSales, last7days, topProducts }
+  return {
+    todaySales, monthSales, totalInventoryValue, totalInventoryQty,
+    pendingBalance, lowStock, lowStockItems, todayExpenses, monthExpenses,
+    recentSales, last7days, topProducts
+  }
 })
-
 ipcMain.handle('reports:salesReport', (_, { date_from, date_to }) => {
   const sales = all(`SELECT s.*, u.name as created_by_name FROM sales s LEFT JOIN users u ON s.created_by=u.id WHERE date(s.created_at) BETWEEN ? AND ? ORDER BY s.created_at DESC`, [date_from, date_to])
   const totals = get(`SELECT COALESCE(SUM(total),0) as revenue, COALESCE(SUM(discount),0) as discounts, COALESCE(SUM(paid),0) as collected, COALESCE(SUM(balance),0) as outstanding, COUNT(*) as count FROM sales WHERE date(created_at) BETWEEN ? AND ?`, [date_from, date_to])

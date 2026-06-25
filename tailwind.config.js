@@ -4,18 +4,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: { 400: '#f87171', 500: '#ef4444', 600: '#dc2626' },
-        dark: {
-          900: '#080810', 800: '#0f0f1a', 700: '#141420',
-          600: '#1a1a2a', 500: '#1e1e2e', 400: '#252538',
-          300: '#2a2a3d', 200: '#3a3a52', 100: '#8888aa',
-        }
-      },
-      animation: {
-        'fade-up': 'fadeUp 0.3s ease-out forwards',
-        'slide-up': 'modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards',
-        'spin-slow': 'spin-slow 8s linear infinite',
-      },
+        bg:     '#070b12',
+        card:   '#0a0f18',
+        hover:  '#0d1420',
+        border: '#111827',
+        accent: '#06b6d4',
+        success:'#22c55e',
+        warning:'#f59e0b',
+        danger: '#f87171',
+        t1:     '#e2e8f0',
+        t2:     '#64748b',
+        t3:     '#334155',
+      }
     },
   },
   plugins: [],

@@ -65,7 +65,7 @@ function UserForm({ item, onSave, onClose }) {
           <label className="label">Password {item ? '(leave blank to keep)' : '*'}</label>
           <div className="relative">
             <input type={showPass ? 'text' : 'password'} className="input pr-9" value={form.password} onChange={set('password')} placeholder={item ? 'New password (optional)' : 'Set password'} />
-            <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-300 hover:text-white">
+            <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-t2 hover:text-white">
               {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
           </div>
@@ -88,10 +88,10 @@ function UserForm({ item, onSave, onClose }) {
         )}
       </div>
 
-      <div className="bg-dark-600/50 rounded-xl p-3 text-xs text-dark-300 space-y-1">
-        <div className="font-medium text-dark-200 mb-1">Role Permissions:</div>
-        <div><span className="text-brand-400">Admin:</span> Full access — inventory values, cost prices, delete, reports, settings, user management</div>
-        <div><span className="text-dark-300">Staff:</span> Sales, view inventory (no costs), customers, suppliers, expenses — no delete, no reports</div>
+      <div className="bg-card/50 rounded-xl p-3 text-xs text-t2 space-y-1">
+        <div className="font-medium text-t2 mb-1">Role Permissions:</div>
+        <div><span className="text-accent">Admin:</span> Full access — inventory values, cost prices, delete, reports, settings, user management</div>
+        <div><span className="text-t2">Staff:</span> Sales, view inventory (no costs), customers, suppliers, expenses — no delete, no reports</div>
       </div>
 
       <div className="flex justify-end gap-3">
@@ -141,23 +141,23 @@ function UsersSettings() {
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-dark-600">
-              <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Name</th>
-              <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Username</th>
-              <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Role</th>
-              <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Status</th>
-              <th className="px-4 py-3 text-center text-xs text-dark-300 font-medium">Actions</th>
+            <tr className="border-b border-border">
+              <th className="px-4 py-3 text-left text-xs text-t2 font-medium">Name</th>
+              <th className="px-4 py-3 text-left text-xs text-t2 font-medium">Username</th>
+              <th className="px-4 py-3 text-left text-xs text-t2 font-medium">Role</th>
+              <th className="px-4 py-3 text-left text-xs text-t2 font-medium">Status</th>
+              <th className="px-4 py-3 text-center text-xs text-t2 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.map(u => (
               <tr key={u.id} className="table-row">
                 <td className="px-4 py-3 font-medium text-white">
-                  {u.name} {u.id === currentUser?.id && <span className="text-xs text-brand-400">(you)</span>}
+                  {u.name} {u.id === currentUser?.id && <span className="text-xs text-accent">(you)</span>}
                 </td>
-                <td className="px-4 py-3 font-mono text-dark-300 text-xs">{u.username}</td>
+                <td className="px-4 py-3 font-mono text-t2 text-xs">{u.username}</td>
                 <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-brand-500/20 text-brand-400' : 'bg-dark-500 text-dark-200'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.role === 'admin' ? 'bg-brand-500/20 text-accent' : 'bg-card text-t2'}`}>
                     {u.role}
                   </span>
                 </td>
@@ -166,8 +166,8 @@ function UsersSettings() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-center gap-1">
-                    <button onClick={() => { setEditItem(u); setModal('form') }} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-brand-400 transition-colors"><Edit size={14} /></button>
-                    <button onClick={() => setDeleteId(u.id)} disabled={u.id === currentUser?.id} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-red-400 transition-colors disabled:opacity-30"><Trash size={14} /></button>
+                    <button onClick={() => { setEditItem(u); setModal('form') }} className="p-1.5 hover:bg-card rounded-lg text-t2 hover:text-accent transition-colors"><Edit size={14} /></button>
+                    <button onClick={() => setDeleteId(u.id)} disabled={u.id === currentUser?.id} className="p-1.5 hover:bg-card rounded-lg text-t2 hover:text-red-400 transition-colors disabled:opacity-30"><Trash size={14} /></button>
                   </div>
                 </td>
               </tr>
@@ -195,9 +195,9 @@ export default function SettingsScreen() {
   return (
     <div className="p-6 space-y-5">
       <h1 className="text-2xl font-bold text-white">Settings</h1>
-      <div className="flex gap-1 bg-dark-700 rounded-xl p-1 w-fit">
-        <button onClick={() => setTab('company')} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === 'company' ? 'bg-brand-500 text-dark-900' : 'text-dark-300 hover:text-white'}`}>Company</button>
-        <button onClick={() => setTab('users')} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === 'users' ? 'bg-brand-500 text-dark-900' : 'text-dark-300 hover:text-white'}`}>Users</button>
+      <div className="flex gap-1 bg-card rounded-xl p-1 w-fit">
+        <button onClick={() => setTab('company')} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === 'company' ? 'bg-brand-500 text-t2' : 'text-t2 hover:text-white'}`}>Company</button>
+        <button onClick={() => setTab('users')} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === 'users' ? 'bg-brand-500 text-t2' : 'text-t2 hover:text-white'}`}>Users</button>
       </div>
       {tab === 'company' ? <CompanySettings /> : <UsersSettings />}
     </div>

@@ -9,9 +9,9 @@ const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).
 function StatBox({ label, value, sub, color = 'text-white' }) {
   return (
     <div className="card p-4">
-      <div className="text-xs text-dark-300 uppercase tracking-wide mb-1">{label}</div>
+      <div className="text-xs text-t2 uppercase tracking-wide mb-1">{label}</div>
       <div className={`text-2xl font-bold ${color}`}>{value}</div>
-      {sub && <div className="text-xs text-dark-300 mt-0.5">{sub}</div>}
+      {sub && <div className="text-xs text-t2 mt-0.5">{sub}</div>}
     </div>
   )
 }
@@ -46,21 +46,15 @@ export default function ReportsScreen() {
     if (!report?.sales) return []
     const map = {}
     report.sales.forEach(s => {
-      if (!s.created_at) return
-      const day = s.created_at.includes('T') ? s.created_at.split('T')[0] : s.created_at.split(' ')[0]
-      if (!day) return
+      const day = s.created_at?.split('T')[0] || s.created_at?.split(' ')[0]
       if (!map[day]) map[day] = { day, revenue: 0, count: 0 }
       map[day].revenue += s.total
       map[day].count++
     })
-    return Object.values(map).sort((a, b) => a.day.localeCompare(b.day)).map(d => {
-      const parts = d.day.split('-')
-      const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
-      return {
-        ...d,
-        dayLabel: isNaN(dateObj.getTime()) ? d.day : dateObj.toLocaleDateString('en-PK', { month: 'short', day: 'numeric' })
-      }
-    })
+    return Object.values(map).sort((a, b) => a.day.localeCompare(b.day)).map(d => ({
+      ...d,
+      dayLabel: new Date(d.day + 'T00:00').toLocaleDateString('en-PK', { month: 'short', day: 'numeric' })
+    }))
   }, [report])
 
   return (
@@ -96,7 +90,7 @@ export default function ReportsScreen() {
       </div>
 
       {!report ? (
-        <div className="flex flex-col items-center justify-center py-20 text-dark-300">
+        <div className="flex flex-col items-center justify-center py-20 text-t2">
           <TrendingUp size={48} className="mb-3 opacity-30" />
           <p>Select a date range and click Generate Report</p>
         </div>
@@ -104,15 +98,11 @@ export default function ReportsScreen() {
         <>
           {/* Summary Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatBox label="Total Revenue" value={fmt.currency(report.totals?.revenue)} sub={`${report.totals?.count} sales`} color="text-brand-400" />
-            <StatBox label="Cash Collected" value={fmt.currency(report.totals?.collected)} sub="actually received" color="text-green-400" />
-            <StatBox label="Still Owed" value={fmt.currency(report.totals?.outstanding)} sub="pending from customers" color="text-amber-400" />
+            <StatBox label="Total Revenue" value={fmt.currency(report.totals?.revenue)} sub={`${report.totals?.count} sales`} color="text-accent" />
             <StatBox label="Cost of Goods" value={fmt.currency(report.costOfGoods?.cogs)} color="text-red-400" />
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatBox label="Expenses" value={fmt.currency(report.expenses?.total)} color="text-red-400" />
             <StatBox
-              label="Net Profit (on paper)"
+              label="Net Profit"
               value={fmt.currency(profit)}
               sub={report.totals?.revenue > 0 ? `${((profit / report.totals.revenue) * 100).toFixed(1)}% margin` : ''}
               color={profit >= 0 ? 'text-green-400' : 'text-red-400'}
@@ -140,17 +130,17 @@ export default function ReportsScreen() {
             <div className="card p-5">
               <h3 className="text-sm font-semibold text-white mb-4">Top Products by Sales</h3>
               {topProducts.length === 0 ? (
-                <p className="text-dark-300 text-sm">No sales in this period</p>
+                <p className="text-t2 text-sm">No sales in this period</p>
               ) : (
                 <div className="space-y-3">
                   {topProducts.slice(0, 10).map((p, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <span className="w-5 text-xs text-dark-300 font-mono">{i + 1}</span>
+                      <span className="w-5 text-xs text-t2 font-mono">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-white truncate">{p.brand} {p.size}</div>
-                        <div className="text-xs text-dark-300">{p.pattern && `${p.pattern} · `}{p.sold} sold</div>
+                        <div className="text-xs text-t2">{p.pattern && `${p.pattern} · `}{p.sold} sold</div>
                       </div>
-                      <div className="text-xs font-medium text-brand-400 shrink-0">{fmt.currency(p.revenue)}</div>
+                      <div className="text-xs font-medium text-accent shrink-0">{fmt.currency(p.revenue)}</div>
                     </div>
                   ))}
                 </div>
@@ -162,12 +152,12 @@ export default function ReportsScreen() {
               <h3 className="text-sm font-semibold text-white mb-4">Sales Summary ({report.sales?.length})</h3>
               <div className="space-y-2 max-h-72 overflow-y-auto">
                 {report.sales?.length === 0 ? (
-                  <p className="text-dark-300 text-sm">No sales in this period</p>
+                  <p className="text-t2 text-sm">No sales in this period</p>
                 ) : report.sales?.map(s => (
-                  <div key={s.id} className="flex items-center justify-between p-2.5 bg-dark-700 rounded-xl text-xs">
+                  <div key={s.id} className="flex items-center justify-between p-2.5 bg-card rounded-xl text-xs">
                     <div>
-                      <div className="font-mono text-brand-400">{s.invoice_no}</div>
-                      <div className="text-dark-300">{s.customer_name}</div>
+                      <div className="font-mono text-accent">{s.invoice_no}</div>
+                      <div className="text-t2">{s.customer_name}</div>
                     </div>
                     <div className="text-right">
                       <div className="font-medium text-white">{fmt.currency(s.total)}</div>

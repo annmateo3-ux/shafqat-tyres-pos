@@ -58,19 +58,14 @@ function PaymentModal({ supplier, onClose, onDone }) {
 
   return (
     <div className="space-y-5">
-      <div className="card p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <div className="font-semibold text-white">{supplier.name}</div>
-            <div className="text-xs text-dark-300">{supplier.phone} · {supplier.city}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-dark-300">Amount We Owe</div>
-            <div className={`text-xl font-bold ${supplier.balance > 0 ? 'text-red-400' : 'text-green-400'}`}>{fmt.currency(supplier.balance)}</div>
-          </div>
+      <div className="card p-4 flex items-center justify-between">
+        <div>
+          <div className="font-semibold text-white">{supplier.name}</div>
+          <div className="text-xs text-t2">{supplier.phone} · {supplier.city}</div>
         </div>
-        <div style={{ fontSize: '11px', color: '#4a4a6a', borderTop: '1px solid #1e1e2e', paddingTop: '8px', marginTop: '4px' }}>
-          Stock purchases increase what we owe. Payments we make reduce it.
+        <div className="text-right">
+          <div className="text-xs text-t2">Amount Owed</div>
+          <div className={`text-xl font-bold ${supplier.balance > 0 ? 'text-red-400' : 'text-green-400'}`}>{fmt.currency(supplier.balance)}</div>
         </div>
       </div>
 
@@ -93,30 +88,16 @@ function PaymentModal({ supplier, onClose, onDone }) {
 
       <div>
         <h4 className="text-sm font-semibold text-white mb-3">Transaction History</h4>
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {payments.length === 0 ? <p className="text-dark-300 text-sm">No transactions yet</p> : payments.map(p => (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#1a1a2a', borderRadius: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                  width: '30px', height: '30px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: p.type === 'purchase' ? '#ef444420' : '#22c55e20',
-                  color: p.type === 'purchase' ? '#ef4444' : '#22c55e', fontSize: '16px', fontWeight: 700,
-                }}>
-                  {p.type === 'purchase' ? '+' : '−'}
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {payments.length === 0 ? <p className="text-t2 text-sm">No transactions yet</p> : payments.map(p => (
+            <div key={p.id} className="flex items-center justify-between p-3 bg-card rounded-xl text-sm">
+              <div>
+                <div className={`font-medium ${p.type === 'purchase' ? 'text-red-400' : 'text-green-400'}`}>
+                  {p.type === 'purchase' ? '+ Purchase' : '- Payment'} {fmt.currency(p.amount)}
                 </div>
-                <div>
-                  <div style={{ fontWeight: 600, color: 'white', fontSize: '13px' }}>
-                    {p.type === 'purchase' ? 'Stock Purchase' : 'Payment Made'}
-                  </div>
-                  {p.notes && <div style={{ fontSize: '11px', color: '#6b7280' }}>{p.notes}</div>}
-                </div>
+                {p.notes && <div className="text-xs text-t2">{p.notes}</div>}
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 700, fontSize: '13px', color: p.type === 'purchase' ? '#ef4444' : '#22c55e' }}>
-                  {fmt.currency(p.amount)}
-                </div>
-                <div style={{ fontSize: '11px', color: '#6b7280' }}>{fmt.date(p.date)}</div>
-              </div>
+              <div className="text-t2 text-xs">{fmt.date(p.date)}</div>
             </div>
           ))}
         </div>
@@ -168,7 +149,7 @@ export default function SuppliersScreen() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Suppliers</h1>
-          <p className="text-dark-300 text-sm">{suppliers.length} suppliers · {fmt.currency(totalOwed)} owed</p>
+          <p className="text-t2 text-sm">{suppliers.length} suppliers · {fmt.currency(totalOwed)} owed</p>
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="btn-ghost"><RefreshCw size={16} /></button>
@@ -177,7 +158,7 @@ export default function SuppliersScreen() {
       </div>
 
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-300"><Search size={16} /></span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-t2"><Search size={16} /></span>
         <input className="input pl-9" placeholder="Search name, phone, city..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
@@ -185,24 +166,24 @@ export default function SuppliersScreen() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-dark-600">
-                <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Name</th>
-                <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Phone</th>
-                <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">City</th>
-                {isAdmin && <th className="px-4 py-3 text-right text-xs text-dark-300 font-medium">Balance Owed</th>}
-                <th className="px-4 py-3 text-center text-xs text-dark-300 font-medium">Actions</th>
+              <tr className="border-b border-border">
+                <th className="px-4 py-3 text-left text-xs text-t2 font-medium">Name</th>
+                <th className="px-4 py-3 text-left text-xs text-t2 font-medium">Phone</th>
+                <th className="px-4 py-3 text-left text-xs text-t2 font-medium">City</th>
+                {isAdmin && <th className="px-4 py-3 text-right text-xs text-t2 font-medium">Balance Owed</th>}
+                <th className="px-4 py-3 text-center text-xs text-t2 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="5" className="py-12 text-center text-dark-300">Loading...</td></tr>
+                <tr><td colSpan="5" className="py-12 text-center text-t2">Loading...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan="5" className="py-12 text-center text-dark-300">No suppliers found</td></tr>
+                <tr><td colSpan="5" className="py-12 text-center text-t2">No suppliers found</td></tr>
               ) : filtered.map(s => (
                 <tr key={s.id} className="table-row">
                   <td className="px-4 py-3 font-medium text-white">{s.name}</td>
-                  <td className="px-4 py-3 text-dark-300">{s.phone || '—'}</td>
-                  <td className="px-4 py-3 text-dark-300">{s.city || '—'}</td>
+                  <td className="px-4 py-3 text-t2">{s.phone || '—'}</td>
+                  <td className="px-4 py-3 text-t2">{s.city || '—'}</td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-right">
                       {s.balance > 0 ? <span className="text-red-400 font-bold">{fmt.currency(s.balance)}</span> : <span className="text-green-400 text-xs">Clear</span>}
@@ -210,9 +191,9 @@ export default function SuppliersScreen() {
                   )}
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => setPayItem(s)} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-brand-400 transition-colors" title="Transactions"><Eye size={14} /></button>
-                      <button onClick={() => { setEditItem(s); setModal('form') }} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-brand-400 transition-colors"><Edit size={14} /></button>
-                      {isAdmin && <button onClick={() => setDeleteId(s.id)} className="p-1.5 hover:bg-dark-500 rounded-lg text-dark-300 hover:text-red-400 transition-colors"><Trash size={14} /></button>}
+                      <button onClick={() => setPayItem(s)} className="p-1.5 hover:bg-card rounded-lg text-t2 hover:text-accent transition-colors" title="Transactions"><Eye size={14} /></button>
+                      <button onClick={() => { setEditItem(s); setModal('form') }} className="p-1.5 hover:bg-card rounded-lg text-t2 hover:text-accent transition-colors"><Edit size={14} /></button>
+                      {isAdmin && <button onClick={() => setDeleteId(s.id)} className="p-1.5 hover:bg-card rounded-lg text-t2 hover:text-red-400 transition-colors"><Trash size={14} /></button>}
                     </div>
                   </td>
                 </tr>

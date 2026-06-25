@@ -107,7 +107,7 @@ export default function ExpensesScreen() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Expenses</h1>
-          <p className="text-dark-300 text-sm">Total: {fmt.currency(total)} ({filtered.length} records)</p>
+          <p className="text-t2 text-sm">Total: {fmt.currency(total)} ({filtered.length} records)</p>
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="btn-ghost"><RefreshCw size={16} /></button>
@@ -118,13 +118,13 @@ export default function ExpensesScreen() {
       {/* Category breakdown */}
       {catTotals.length > 0 && (
         <div className="card p-4">
-          <h3 className="text-xs font-semibold text-dark-300 uppercase tracking-wide mb-3">By Category</h3>
+          <h3 className="text-xs font-semibold text-t2 uppercase tracking-wide mb-3">By Category</h3>
           <div className="flex flex-wrap gap-2">
             {catTotals.map(([cat, total]) => (
               <button
                 key={cat}
                 onClick={() => setFilterCat(filterCat === cat ? '' : cat)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filterCat === cat ? 'bg-brand-500 text-dark-900' : 'bg-dark-600 text-dark-200 hover:bg-dark-500'}`}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filterCat === cat ? 'bg-brand-500 text-t2' : 'bg-card text-t2 hover:bg-card'}`}
               >
                 {cat}: {fmt.currency(total)}
               </button>
@@ -136,7 +136,7 @@ export default function ExpensesScreen() {
       {/* Filters */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-300"><Search size={16} /></span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-t2"><Search size={16} /></span>
           <input className="input pl-9" placeholder="Search category, description..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         {filterCat && <button onClick={() => setFilterCat('')} className="btn-ghost text-sm">Clear filter</button>}
@@ -146,33 +146,33 @@ export default function ExpensesScreen() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-dark-600">
-                <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Date</th>
-                <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Category</th>
-                <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Description</th>
-                <th className="px-4 py-3 text-right text-xs text-dark-300 font-medium">Amount</th>
-                <th className="px-4 py-3 text-left text-xs text-dark-300 font-medium">Added By</th>
-                <th className="px-4 py-3 text-center text-xs text-dark-300 font-medium">Actions</th>
+              <tr className="border-b border-border">
+                <th className="px-4 py-3 text-left text-xs text-t2 font-medium">Date</th>
+                <th className="px-4 py-3 text-left text-xs text-t2 font-medium">Category</th>
+                <th className="px-4 py-3 text-left text-xs text-t2 font-medium">Description</th>
+                <th className="px-4 py-3 text-right text-xs text-t2 font-medium">Amount</th>
+                <th className="px-4 py-3 text-left text-xs text-t2 font-medium">Added By</th>
+                <th className="px-4 py-3 text-center text-xs text-t2 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="6" className="py-12 text-center text-dark-300">Loading...</td></tr>
+                <tr><td colSpan="6" className="py-12 text-center text-t2">Loading...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan="6" className="py-12 text-center text-dark-300">No expenses found</td></tr>
+                <tr><td colSpan="6" className="py-12 text-center text-t2">No expenses found</td></tr>
               ) : filtered.map(e => (
                 <tr key={e.id} className="table-row">
-                  <td className="px-4 py-3 text-dark-300 text-xs">{fmt.date(e.date)}</td>
+                  <td className="px-4 py-3 text-t2 text-xs">{fmt.date(e.date)}</td>
                   <td className="px-4 py-3">
-                    <span className="bg-dark-600 text-dark-200 text-xs px-2 py-0.5 rounded-full">{e.category}</span>
+                    <span className="bg-card text-t2 text-xs px-2 py-0.5 rounded-full">{e.category}</span>
                   </td>
-                  <td className="px-4 py-3 text-dark-200">{e.description || '—'}</td>
+                  <td className="px-4 py-3 text-t2">{e.description || '—'}</td>
                   <td className="px-4 py-3 text-right font-medium text-red-400">{fmt.currency(e.amount)}</td>
-                  <td className="px-4 py-3 text-xs text-dark-300">{e.created_by_name || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-t2">{e.created_by_name || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => { setEditItem(e); setModal('form') }} className="action-btn" title="Edit"><Edit size={15} /></button>
-                      {isAdmin && <button onClick={() => setDeleteId(e.id)} className="action-btn" title="Delete"><Trash size={15} /></button>}
+                      <button onClick={() => { setEditItem(e); setModal('form') }} className="p-1.5 hover:bg-card rounded-lg text-t2 hover:text-accent transition-colors"><Edit size={14} /></button>
+                      {isAdmin && <button onClick={() => setDeleteId(e.id)} className="p-1.5 hover:bg-card rounded-lg text-t2 hover:text-red-400 transition-colors"><Trash size={14} /></button>}
                     </div>
                   </td>
                 </tr>
